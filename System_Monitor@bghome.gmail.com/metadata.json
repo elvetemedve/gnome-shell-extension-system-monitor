@@ -1,0 +1,6 @@
+{
+	"shell-version": ["3.10", "3.12"], 
+	"uuid": "System_Monitor@bghome.gmail.com", 
+	"name": "System Monitor", 
+	"description": "Display resource usage"
+}

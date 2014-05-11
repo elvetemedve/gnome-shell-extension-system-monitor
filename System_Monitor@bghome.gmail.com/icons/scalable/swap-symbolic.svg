@@ -1,0 +1,160 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!-- Created with Inkscape (http://www.inkscape.org/) -->
+
+<svg
+   xmlns:dc="http://purl.org/dc/elements/1.1/"
+   xmlns:cc="http://creativecommons.org/ns#"
+   xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+   xmlns:svg="http://www.w3.org/2000/svg"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   width="16"
+   version="1.1"
+   inkscape:version="0.48.4 r9939"
+   id="svg7384"
+   height="16"
+   sodipodi:docname="swap-symbolic.svg">
+  <sodipodi:namedview
+     inkscape:bbox-nodes="true"
+     inkscape:bbox-paths="true"
+     bordercolor="#666666"
+     borderopacity="1"
+     inkscape:current-layer="layer11"
+     inkscape:cx="1.0239032"
+     inkscape:cy="10.488282"
+     gridtolerance="10"
+     inkscape:guide-bbox="true"
+     guidetolerance="10"
+     id="namedview88"
+     inkscape:object-nodes="false"
+     inkscape:object-paths="false"
+     objecttolerance="10"
+     pagecolor="#3a3b39"
+     inkscape:pageopacity="1"
+     inkscape:pageshadow="2"
+     showborder="false"
+     showgrid="false"
+     showguides="true"
+     inkscape:snap-bbox="true"
+     inkscape:snap-bbox-midpoints="false"
+     inkscape:snap-global="true"
+     inkscape:snap-grids="true"
+     inkscape:snap-nodes="false"
+     inkscape:snap-others="false"
+     inkscape:snap-to-guides="true"
+     inkscape:window-height="1018"
+     inkscape:window-maximized="1"
+     inkscape:window-width="1920"
+     inkscape:window-x="0"
+     inkscape:window-y="27"
+     inkscape:zoom="31.999998"
+     inkscape:snap-page="false">
+    <inkscape:grid
+       visible="true"
+       type="xygrid"
+       spacingy="1px"
+       spacingx="1px"
+       snapvisiblegridlinesonly="true"
+       originy="270px"
+       originx="600.0002px"
+       id="grid4866"
+       enabled="true"
+       empspacing="2" />
+    <sodipodi:guide
+       id="guide3786"
+       position="1.0606602,-0.13258252"
+       orientation="0,1" />
+    <sodipodi:guide
+       id="guide3820"
+       position="0.044194174,0.92807765"
+       orientation="1,0" />
+    <sodipodi:guide
+       id="guide3849"
+       position="16.086679,11.534679"
+       orientation="1,0" />
+    <sodipodi:guide
+       id="guide4007"
+       position="-3.8448931,16.042485"
+       orientation="0,1" />
+  </sodipodi:namedview>
+  <metadata
+     id="metadata90">
+    <rdf:RDF>
+      <cc:Work
+         rdf:about="">
+        <dc:format>image/svg+xml</dc:format>
+        <dc:type
+           rdf:resource="http://purl.org/dc/dcmitype/StillImage" />
+        <dc:title>Gnome Symbolic Icon Theme</dc:title>
+      </cc:Work>
+    </rdf:RDF>
+  </metadata>
+  <title
+     id="title9167">Gnome Symbolic Icon Theme</title>
+  <defs
+     id="defs7386" />
+  <g
+     transform="translate(359,-487)"
+     style="display:inline"
+     inkscape:label="status"
+     id="layer9"
+     inkscape:groupmode="layer" />
+  <g
+     transform="translate(359,-487)"
+     inkscape:label="devices"
+     id="layer10"
+     inkscape:groupmode="layer" />
+  <g
+     transform="translate(359,-487)"
+     inkscape:label="apps"
+     id="layer11"
+     inkscape:groupmode="layer">
+    <path
+       id="rect3036-3-6"
+       transform="translate(-359,487)"
+       d="M 0.0625 10.4375 C 0.0611693 10.48289 0.03837838 10.537919 0.03125 10.5625 L 0.03125 14.96875 C 0.03183 15.57222 0.47864 16.12429 0.96875 16.125 L 15.15625 16.125 C 15.64636 16.12429 16.09317 15.57222 16.09375 14.96875 L 16.09375 10.5625 C 16.08975 10.4847 16.0792 10.51276 16.0625 10.4375 C 15.94248 10.90614 15.5553 10.88082 15.15625 10.875 L 0.96875 10.875 C 0.5697 10.881 0.18252 10.9062 0.0625 10.4375 z M 1.0625 11.75 L 2.21875 11.75 L 2.21875 13.90625 L 3.9375 13.90625 L 3.9375 11.75 L 5.09375 11.75 L 5.09375 13.90625 L 6.8125 13.90625 L 6.8125 11.75 L 7.96875 11.75 L 7.96875 13.90625 L 9.6875 13.90625 L 9.6875 11.75 L 10.84375 11.75 L 10.84375 13.90625 L 10.84375 15.125 L 1.0625 15.125 L 1.0625 13.9375 L 1.0625 13.90625 L 1.0625 11.75 z M 13.625 11.75 C 14.6325 11.75 15.4375 12.57708 15.4375 13.59375 C 15.4375 14.61042 14.6325 15.4375 13.625 15.4375 C 12.6175 15.4375 11.8125 14.61042 11.8125 13.59375 C 11.8125 12.57708 12.6175 11.75 13.625 11.75 z "
+       style="font-size:medium;font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;text-indent:0;text-align:start;text-decoration:none;line-height:normal;letter-spacing:normal;word-spacing:normal;text-transform:none;direction:ltr;block-progression:tb;writing-mode:lr-tb;text-anchor:start;baseline-shift:baseline;color:#000000;fill:#bebebe;fill-opacity:1;fill-rule:nonzero;stroke:none;stroke-width:1.87701571;marker:none;visibility:visible;display:inline;overflow:visible;enable-background:accumulate;font-family:Sans;-inkscape-font-specification:Sans" />
+    <path
+       style="fill:#bebebe;fill-opacity:1;stroke:#bebebe;stroke-width:0.69762421;stroke-linecap:butt;stroke-linejoin:round;stroke-miterlimit:4;stroke-opacity:1"
+       d="M 2.34375,0.28125 0.40625,10 15.75,10 13.84375,0.3125 z"
+       transform="translate(-359,487)"
+       id="rect4118"
+       inkscape:connector-curvature="0"
+       sodipodi:nodetypes="ccccc" />
+  </g>
+  <g
+     transform="translate(359,-487)"
+     inkscape:label="places"
+     id="layer13"
+     inkscape:groupmode="layer" />
+  <g
+     transform="translate(359,-487)"
+     inkscape:label="mimetypes"
+     id="layer14"
+     inkscape:groupmode="layer" />
+  <g
+     transform="translate(359,-487)"
+     style="display:inline"
+     inkscape:label="emblems"
+     id="layer15"
+     inkscape:groupmode="layer" />
+  <g
+     transform="translate(359,-487)"
+     style="display:inline"
+     inkscape:label="emotes"
+     id="g71291"
+     inkscape:groupmode="layer" />
+  <g
+     transform="translate(359,-487)"
+     style="display:inline"
+     inkscape:label="categories"
+     id="g4953"
+     inkscape:groupmode="layer" />
+  <g
+     transform="translate(359,-487)"
+     style="display:inline"
+     inkscape:label="actions"
+     id="layer12"
+     inkscape:groupmode="layer" />
+</svg>
