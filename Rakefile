@@ -1,15 +1,24 @@
-require 'rake/packagetask'
+require 'rake'
 
 PACKAGE_NAME = 'System_Monitor@bghome.gmail.com'
 VERSION = '0.1.0'
+BUILD_DIRECTORY = File.join(File.dirname(__FILE__), "build")
 
-Rake::PackageTask.new(PACKAGE_NAME, VERSION) do |pkg|
-	Dir.chdir "System_Monitor@bghome.gmail.com" # Go to the source directory
-	files = Rake::FileList.new("**/**")
+directory BUILD_DIRECTORY
 
-	pkg.need_zip = true
-	pkg.package_dir = File.dirname(__FILE__) + "/build"
-	pkg.package_files = files
+def zip_file
+	"#{PACKAGE_NAME}-#{VERSION}.zip"
+end
+
+task :prepare => BUILD_DIRECTORY do
+	cp_r PACKAGE_NAME, BUILD_DIRECTORY
+end
+
+task :package => [BUILD_DIRECTORY, zip_file]
+file zip_file do
+	chdir(BUILD_DIRECTORY) do
+		sh %{zip -r #{zip_file} #{PACKAGE_NAME}}
+	end
 end
 
 desc "Build the distributable files under the build directory"
@@ -18,6 +27,12 @@ task :build => [:package] do
 end
 
 desc "Clean up build artifacts"
-task :cleanup => [:clobber_package] do
+task :cleanup do
+	rm_r BUILD_DIRECTORY
 	puts "Project is clean"
+end
+
+task :default do
+	puts 'List of available tasks:'
+	system("rake -sT")
 end
