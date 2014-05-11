@@ -3,8 +3,11 @@ require 'rake'
 PACKAGE_NAME = 'System_Monitor@bghome.gmail.com'
 VERSION = '0.1.0'
 BUILD_DIRECTORY = File.join(File.dirname(__FILE__), "build")
+USER_INSTALL_DIRECTORY = File.expand_path('~/.local/share/gnome-shell/extensions')
+SYSTEM_INSTALL_DIRECTORY = '/usr/local/share/gnome-shell/extensions'
 
 directory BUILD_DIRECTORY
+directory USER_INSTALL_DIRECTORY
 
 def zip_file
 	"#{PACKAGE_NAME}-#{VERSION}.zip"
@@ -14,7 +17,7 @@ task :prepare => BUILD_DIRECTORY do
 	cp_r PACKAGE_NAME, BUILD_DIRECTORY
 end
 
-task :package => [BUILD_DIRECTORY, zip_file]
+task :package => [:prepare, zip_file]
 file zip_file do
 	chdir(BUILD_DIRECTORY) do
 		sh %{zip -r #{zip_file} #{PACKAGE_NAME}}
@@ -24,6 +27,25 @@ end
 desc "Build the distributable files under the build directory"
 task :build => [:package] do
 	puts "Build complete"
+end
+
+desc "Install the GNOME extension, available options for target: user*, system."
+task :install, [:target] => [:cleanup, :build] do |t, args|
+	args.with_defaults(:target => 'user')
+
+	if args.target === 'user'
+		target_dir = USER_INSTALL_DIRECTORY
+		message = "#{PACKAGE_NAME} has been installed for the current user."
+	elsif args.target === 'system'
+		target_dir = SYSTEM_INSTALL_DIRECTORY
+		messag = "#{PACKAGE_NAME} has been installed for all users."
+	else
+		raise "Unknown option for target '#{args.target}'."
+	end
+
+	Rake::Task[target_dir].invoke
+	sh %{unzip -uo #{BUILD_DIRECTORY}/#{zip_file} -d #{target_dir}}
+	puts message
 end
 
 desc "Clean up build artifacts"
