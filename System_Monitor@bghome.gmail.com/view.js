@@ -38,6 +38,14 @@ const Menu = new Lang.Class({
         meter.addObserver(icon);
         return icon;
     },
+    destroy: function() {
+        let meters = this._meters;
+        for (let type in meters) {
+            meters[type].destroy();
+        }
+
+        this.parent();
+    },
     updateUi: function () {
         let meters = this._meters;
         for (let type in meters) {

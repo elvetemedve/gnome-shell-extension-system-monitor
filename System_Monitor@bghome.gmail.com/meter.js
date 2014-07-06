@@ -43,7 +43,9 @@ MeterSubject.prototype.notifyAll = function() {
 	if (this.observers.length > 0) {
 		this.notify(this.calculateUsage(), false);
 	}
-}
+};
+
+MeterSubject.prototype.destroy = function() {};
 
 const CpuMeter = function() {
 	this.observers = [];
@@ -52,7 +54,7 @@ const CpuMeter = function() {
 
 	this.loadData = function() {
 		let statistics = {cpu:{}};
-		let file = FactoryModule.AbstractFactory.create('file', '/proc/stat');
+		let file = FactoryModule.AbstractFactory.create('file', this, '/proc/stat');
 		let reverse_data = file.getContents().match(/^cpu.+/)[0].match(/\d+/g).reverse();
 		let columns = ['user','nice','system','idle','iowait','irq','softirq','steal','guest','guest_nice'];
 		for (let index in columns) {
@@ -89,6 +91,10 @@ const CpuMeter = function() {
 		this.usage = usage_calculator(periods.cpu);
 		return this.usage;
 	};
+
+	this.destroy = function() {
+		FactoryModule.AbstractFactory.destroy('file', this);
+	};
 };
 
 CpuMeter.prototype = new MeterSubject();
@@ -100,7 +106,7 @@ const MemoryMeter = function() {
 
 	this.loadData = function() {
 		let statistics = {};
-		let file = FactoryModule.AbstractFactory.create('file', '/proc/meminfo');
+		let file = FactoryModule.AbstractFactory.create('file', this, '/proc/meminfo');
 		let columns = ['memtotal','memfree','buffers','cached'];
 		
 		for (let index in columns) {
@@ -114,6 +120,10 @@ const MemoryMeter = function() {
 		let used = stat.memtotal - stat.memfree - stat.buffers - stat.cached;
 		this.usage = used / stat.memtotal * 100;
 		return this.usage;
+	};
+
+	this.destroy = function() {
+		FactoryModule.AbstractFactory.destroy('file', this);
 	};
 };
 
@@ -144,15 +154,15 @@ const NetworkMeter = function() {
 
 	this.loadData = function() {
 		let statistics = {};
-		let interfaces_directory = FactoryModule.AbstractFactory.create('file', '/sys/class/net');
+		let interfaces_directory = FactoryModule.AbstractFactory.create('file', this, '/sys/class/net');
 
 		for (let device_name of interfaces_directory.list()) {
-			let file = FactoryModule.AbstractFactory.create('file', '/sys/class/net/' + device_name + '/operstate');
+			let file = FactoryModule.AbstractFactory.create('file', this, '/sys/class/net/' + device_name + '/operstate');
 			if (file.getContents().trim() == 'up') {
 				statistics[device_name] = {};
-				file = FactoryModule.AbstractFactory.create('file', '/sys/class/net/' + device_name + '/statistics/rx_bytes');
+				file = FactoryModule.AbstractFactory.create('file', this, '/sys/class/net/' + device_name + '/statistics/rx_bytes');
 				statistics[device_name].rx_bytes = parseInt(file.getContents());
-				file = FactoryModule.AbstractFactory.create('file', '/sys/class/net/' + device_name + '/statistics/tx_bytes');
+				file = FactoryModule.AbstractFactory.create('file', this, '/sys/class/net/' + device_name + '/statistics/tx_bytes');
 				statistics[device_name].tx_bytes = parseInt(file.getContents());
 			}
 		}
@@ -206,6 +216,10 @@ const NetworkMeter = function() {
 
 		return Math.round(sum_percent / total * 100);
 	};
+
+	this.destroy = function() {
+		FactoryModule.AbstractFactory.destroy('file', this);
+	};
 };
 
 NetworkMeter.prototype = new MeterSubject();
@@ -216,7 +230,7 @@ const SwapMeter = function() {
 
 	this.loadData = function() {
 		let statistics = {};
-		let file = FactoryModule.AbstractFactory.create('file', '/proc/meminfo');
+		let file = FactoryModule.AbstractFactory.create('file', this, '/proc/meminfo');
 		let columns = ['swaptotal','swapfree'];
 		
 		for (let index in columns) {
@@ -231,6 +245,10 @@ const SwapMeter = function() {
 		this.usage = used / stat.swaptotal * 100;
 		return this.usage;
 	};
+
+	this.destroy = function() {
+		FactoryModule.AbstractFactory.destroy('file', this);
+	};
 };
 
 SwapMeter.prototype = new MeterSubject();
@@ -242,7 +260,7 @@ const SystemLoadMeter = function() {
 
 	this._getNumberOfCPUCores = function() {
 		if (this._number_of_cpu_cores == null) {
-			let file = FactoryModule.AbstractFactory.create('file', '/proc/cpuinfo');
+			let file = FactoryModule.AbstractFactory.create('file', this, '/proc/cpuinfo');
 			this._number_of_cpu_cores = file.getContents().match(new RegExp('^processor', 'gm')).length;
 		}
 
@@ -251,7 +269,7 @@ const SystemLoadMeter = function() {
 
 	this.loadData = function() {
 		let statistics = {};
-		let file = FactoryModule.AbstractFactory.create('file', '/proc/loadavg');
+		let file = FactoryModule.AbstractFactory.create('file', this, '/proc/loadavg');
 		let reverse_data = file.getContents().split(' ').reverse();
 		let columns = ['oneminute'];
 		
@@ -266,6 +284,10 @@ const SystemLoadMeter = function() {
 		this.usage = stat.oneminute / this._getNumberOfCPUCores() * 100;
 		this.usage = this.usage > 100 ? 100 : this.usage;
 		return this.usage;
+	};
+
+	this.destroy = function() {
+		FactoryModule.AbstractFactory.destroy('file', this);
 	};
 };
 

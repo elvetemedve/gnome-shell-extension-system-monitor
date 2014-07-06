@@ -15,6 +15,13 @@ const File = function(filename) {
 				results.push(file_info.get_attribute_as_string(Gio.FILE_ATTRIBUTE_STANDARD_NAME));
 			}
 			return results;
+		},
+
+		destroy: function() {
+			if (file) {
+				file.unref();
+				file = null;
+			}
 		}
 	}
 }

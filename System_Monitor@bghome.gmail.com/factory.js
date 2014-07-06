@@ -24,6 +24,18 @@ const AbstractFactory = (function() {
             
             throw 'Unknown factory type"' + type + '" given.';
         },
+
+        destroy: function (type) {
+            var Class = types[type];
+            if (Class) {
+            	var factory = new Class();
+            	var args = Array.slice(arguments)
+            	args.shift();
+            	return factory.destroy.apply(factory, args);
+			}
+            
+            throw 'Unknown factory type"' + type + '" given.';
+        },
  
  		// Register an object factory.
         registerObject: function(type, Class) {
@@ -112,16 +124,27 @@ const FileFactory = (function() {
 	var openedFiles = {};
 
 	return function() {
-		this.create = function(filename) {
-			let file = openedFiles[filename];
+		this.create = function(namespace, filename) {
+			if (!openedFiles[namespace]) {
+				openedFiles[namespace] = {};
+			}
+
+			let file = openedFiles[namespace][filename];
 
 			if (!!file) {
 				return file;
 			}
 
 			file = new FileModule.File(filename);
-			openedFiles[filename] = file;
+			openedFiles[namespace][filename] = file;
 			return file;
+		},
+
+		this.destroy = function(namespace) {
+			for (let filename in openedFiles[namespace]) {
+				openedFiles[namespace][filename].destroy();
+				delete openedFiles[namespace][filename];
+			}
 		}
 	};
 })();
