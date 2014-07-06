@@ -38,7 +38,7 @@ task :install, [:target] => [:cleanup, :build] do |t, args|
 		message = "#{PACKAGE_NAME} has been installed for the current user."
 	elsif args.target === 'system'
 		target_dir = SYSTEM_INSTALL_DIRECTORY
-		messag = "#{PACKAGE_NAME} has been installed for all users."
+		message = "#{PACKAGE_NAME} has been installed for all users."
 	else
 		raise "Unknown option for target '#{args.target}'."
 	end
@@ -50,7 +50,9 @@ end
 
 desc "Clean up build artifacts"
 task :cleanup do
-	rm_r BUILD_DIRECTORY
+	if File.exists? BUILD_DIRECTORY
+		rm_r BUILD_DIRECTORY
+	end
 	puts "Project is clean"
 end
 
