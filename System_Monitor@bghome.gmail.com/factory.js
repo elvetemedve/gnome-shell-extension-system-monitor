@@ -5,6 +5,7 @@ const FileModule = Me.imports.file;
 
 const Lang = imports.lang;
 const Gio = imports.gi.Gio;
+const PrefsKeys = Me.imports.prefs_keys;
 
 
 const AbstractFactory = (function() {
@@ -62,17 +63,17 @@ IconFactory.prototype.create = function(type, options) {
 	let constructor_options = default_options;
 	Lang.copyProperties(options, constructor_options);
 	
-	if (type == 'storage') {
+	if (type == PrefsKeys.STORAGE_METER) {
 		constructor_options.icon_name = 'drive-harddisk-symbolic';
-	} else if (type == 'network') {
+	} else if (type == PrefsKeys.NETWORK_METER) {
 		constructor_options.icon_name = 'network-workgroup-symbolic';
-	} else if (type == 'load') {
+	} else if (type == PrefsKeys.LOAD_METER) {
 		constructor_options.icon_name = 'computer-symbolic';
-	} else if (type == 'cpu') {
+	} else if (type == PrefsKeys.CPU_METER) {
 		constructor_options.gicon = Gio.icon_new_for_string(Me.path + "/icons/scalable/cpu-symbolic.svg");
-	} else if (type == 'memory') {
+	} else if (type == PrefsKeys.MEMORY_METER) {
 		constructor_options.gicon = Gio.icon_new_for_string(Me.path + "/icons/scalable/memory-symbolic.svg");
-	} else if (type == 'swap') {
+	} else if (type == PrefsKeys.SWAP_METER) {
 		constructor_options.gicon = Gio.icon_new_for_string(Me.path + "/icons/scalable/swap-symbolic.svg");
 	} else {
 		throw 'Unknown indicator type "' + type + '" given.';
@@ -98,17 +99,17 @@ const MeterFactory = function() {};
 
 MeterFactory.prototype.create = function(type, options) {
 	var class_name;
-	if (type == 'cpu') {
+	if (type == PrefsKeys.CPU_METER) {
 		class_name = MeterModule.CpuMeter;
-	} else if (type == 'memory') {
+	} else if (type == PrefsKeys.MEMORY_METER) {
 		class_name = MeterModule.MemoryMeter;
-	} else if (type == 'storage') {
+	} else if (type == PrefsKeys.STORAGE_METER) {
 		class_name = MeterModule.StorageMeter;
-	} else if (type == 'network') {
+	} else if (type == PrefsKeys.NETWORK_METER) {
 		class_name = MeterModule.NetworkMeter;		
-	} else if (type == 'swap') {
+	} else if (type == PrefsKeys.SWAP_METER) {
 		class_name = MeterModule.SwapMeter;
-	} else if (type == 'load') {
+	} else if (type == PrefsKeys.LOAD_METER) {
 		class_name = MeterModule.SystemLoadMeter;
 	} else {
 		throw 'Unknown meter type "' + type + '" given.';

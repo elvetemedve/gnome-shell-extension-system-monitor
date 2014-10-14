@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<schemalist gettext-domain="gnome-shell-extensions">
+  <schema path="/org/gnome/shell/extensions/system-monitor/" id="org.gnome.shell.extensions.system-monitor">
+    <key type="i" name="refresh-interval">
+        <default>2</default>
+        <summary>Refresh interval in seconds.</summary>
+        <description>Update the GUI after the given number of seconds.</description>
+    </key>
+    <key type="b" name="cpu-meter">
+        <default>true</default>
+        <summary>Enable CPU indicator.</summary>
+        <description>Turn on or off the CPU indicator.</description>
+    </key>
+    <key type="b" name="memory-meter">
+        <default>true</default>
+        <summary>Enable memory indicator.</summary>
+        <description>Turn on or off the memory indicator.</description>
+    </key>
+    <key type="b" name="storage-meter">
+        <default>true</default>
+        <summary>Enable disk indicator.</summary>
+        <description>Turn on or off the local disk usage indicator.</description>
+    </key>
+    <key type="b" name="network-meter">
+        <default>true</default>
+        <summary>Enable network indicator.</summary>
+        <description>Turn on or off the network traffic indicator.</description>
+    </key>
+    <key type="b" name="swap-meter">
+        <default>true</default>
+        <summary>Enable swap indicator.</summary>
+        <description>Turn on or off the swap usage indicator.</description>
+    </key>
+    <key type="b" name="load-meter">
+        <default>true</default>
+        <summary>Enable system load indicator.</summary>
+        <description>Turn on or off the system load indicator.</description>
+    </key>
+  </schema>
+</schemalist>

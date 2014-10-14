@@ -6,23 +6,32 @@ const St = imports.gi.St;
 
 const Me = imports.misc.extensionUtils.getCurrentExtension();
 const FactoryModule = Me.imports.factory;
+const Convenience = Me.imports.convenience;
+const PrefsKeys = Me.imports.prefs_keys;
 
 const Menu = new Lang.Class({
     Name: 'Menu',
     Extends: PanelMenu.Button,
+    _icons: {},
     _meters: {},
+    _event_handler_ids: [],
 
     _init: function() {
     	let menuAlignment = 0.0;
     	this.parent(menuAlignment);
-    	let actor = new St.BoxLayout();
-        actor.add_actor(this._createIcon('cpu'));
-        actor.add_actor(this._createIcon('memory'));
-    	actor.add_actor(this._createIcon('storage'));
-        actor.add_actor(this._createIcon('network'));
-        actor.add_actor(this._createIcon('swap'));
-        actor.add_actor(this._createIcon('load'));
-    	this.actor.add_actor(actor);
+    	this._layout = new St.BoxLayout();
+        this._settings = Convenience.getSettings();
+        this.available_meters = [PrefsKeys.CPU_METER, PrefsKeys.MEMORY_METER, PrefsKeys.STORAGE_METER, PrefsKeys.NETWORK_METER, PrefsKeys.SWAP_METER, PrefsKeys.LOAD_METER];
+        
+        for (let index in this.available_meters) {
+            let type = this.available_meters[index];
+            if (this._settings.get_boolean(type)) {
+                this._createIcon(type);
+            }
+            this._addSettingChangedHandler(type);
+        }
+
+    	this.actor.add_actor(this._layout);
     	this.menu.addMenuItem(new PopupMenu.PopupMenuItem('lorem ipsum', {}));
     	Panel.addToStatusArea('system-monitor', this, 1, 'center');
     },
@@ -36,7 +45,31 @@ const Menu = new Lang.Class({
         }
 
         meter.addObserver(icon);
-        return icon;
+        this._layout.insert_child_at_index(icon, this.available_meters.indexOf(type));
+        this._icons[type] = icon;
+    },
+    _destroyIcon: function(type) {
+        let icon = this._icons[type];
+        this._meters[type].removeObserver(icon);
+        this._layout.remove_actor(icon);
+        icon.destroy();
+        delete this._icons[type];
+    },
+    _addSettingChangedHandler: function(type) {
+        let event_id = this._settings.connect('changed::' + type, Lang.bind(this, function(settings, key) {
+            let is_enabled = settings.get_boolean(key);
+            if (is_enabled) {
+                this._createIcon(type);
+            } else {
+                this._destroyIcon(type);
+            }
+        }));
+        this._event_handler_ids.push(event_id);
+    },
+    _removeAllSettingChangedHandlers: function() {
+        for (let index in this._event_handler_ids) {
+            this._settings.disconnect(this._event_handler_ids[index]);
+        }
     },
     destroy: function() {
         let meters = this._meters;
@@ -44,6 +77,7 @@ const Menu = new Lang.Class({
             meters[type].destroy();
         }
 
+        this._removeAllSettingChangedHandlers();
         this.parent();
     },
     updateUi: function () {

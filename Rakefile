@@ -5,6 +5,7 @@ VERSION = '0.1.0'
 BUILD_DIRECTORY = File.join(File.dirname(__FILE__), "build")
 USER_INSTALL_DIRECTORY = File.expand_path('~/.local/share/gnome-shell/extensions')
 SYSTEM_INSTALL_DIRECTORY = '/usr/local/share/gnome-shell/extensions'
+GLIB_SCHEMA_COMPILE_COMMAND = 'glib-compile-schemas'
 
 directory BUILD_DIRECTORY
 directory USER_INSTALL_DIRECTORY
@@ -15,6 +16,7 @@ end
 
 task :prepare => BUILD_DIRECTORY do
 	cp_r PACKAGE_NAME, BUILD_DIRECTORY
+	sh %{#{GLIB_SCHEMA_COMPILE_COMMAND} #{BUILD_DIRECTORY}/#{PACKAGE_NAME}/schemas}
 end
 
 task :package => [:prepare, zip_file]
