@@ -45,9 +45,31 @@ task :install, [:target] => [:cleanup, :build] do |t, args|
 		raise "Unknown option for target '#{args.target}'."
 	end
 
+	Rake::Task['uninstall'].invoke args.target
 	Rake::Task[target_dir].invoke
 	sh %{unzip -uo #{BUILD_DIRECTORY}/#{zip_file} -d #{target_dir}}
 	puts message
+end
+
+desc "Uninstall the GNOME extension, available options for target: user*, system."
+task :uninstall, [:target] do |t, args|
+	args.with_defaults(:target => 'user')
+
+	if args.target === 'user'
+		target_dir = USER_INSTALL_DIRECTORY
+		message = "#{PACKAGE_NAME} has been removed for the current user."
+	elsif args.target === 'system'
+		target_dir = SYSTEM_INSTALL_DIRECTORY
+		message = "#{PACKAGE_NAME} has been removed for all users."
+	else
+		raise "Unknown option for target '#{args.target}'."
+	end
+
+	if File.exists? target_dir
+		rm_r "#{target_dir}/#{PACKAGE_NAME}"
+		puts message
+	end
+
 end
 
 desc "Clean up build artifacts"

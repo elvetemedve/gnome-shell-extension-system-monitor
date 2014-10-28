@@ -51,6 +51,8 @@ const IconFactory = function() {};
 IconFactory.prototype.concreteClass = IndicatorModule.Icon;
 
 // Create an indicator icon object, options will be passed to the real object's constructor.
+//
+// For working with themed icons see http://standards.freedesktop.org/icon-theme-spec/icon-theme-spec-latest.html
 IconFactory.prototype.create = function(type, options) {
 
 	let default_options = {
@@ -70,11 +72,11 @@ IconFactory.prototype.create = function(type, options) {
 	} else if (type == PrefsKeys.LOAD_METER) {
 		constructor_options.icon_name = 'computer-symbolic';
 	} else if (type == PrefsKeys.CPU_METER) {
-		constructor_options.gicon = Gio.icon_new_for_string(Me.path + "/icons/scalable/cpu-symbolic.svg");
+		constructor_options.gicon = Gio.icon_new_for_string('cpu-symbolic');
 	} else if (type == PrefsKeys.MEMORY_METER) {
-		constructor_options.gicon = Gio.icon_new_for_string(Me.path + "/icons/scalable/memory-symbolic.svg");
+		constructor_options.gicon = Gio.icon_new_for_string('memory-symbolic');
 	} else if (type == PrefsKeys.SWAP_METER) {
-		constructor_options.gicon = Gio.icon_new_for_string(Me.path + "/icons/scalable/swap-symbolic.svg");
+		constructor_options.gicon = Gio.icon_new_for_string('swap-symbolic');
 	} else {
 		throw 'Unknown indicator type "' + type + '" given.';
 	}

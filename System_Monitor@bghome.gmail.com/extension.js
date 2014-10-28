@@ -44,7 +44,9 @@ const Timer = new Lang.Class({
 let timer;
 
 function init() {
-
+    // Register application-specific themed icons.
+    let theme = imports.gi.Gtk.IconTheme.get_default();
+    theme.append_search_path(Me.path + '/icons');
 }
 
 function enable() {

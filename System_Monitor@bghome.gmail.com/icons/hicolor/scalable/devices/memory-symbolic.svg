@@ -10,11 +10,11 @@
    xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
    xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
    sodipodi:docname="memory-symbolic.svg"
-   height="16"
+   height="128"
    id="svg7384"
-   inkscape:version="0.48.4 r9939"
+   inkscape:version="0.48.5 r10040"
    version="1.1"
-   width="16">
+   width="128">
   <metadata
      id="metadata90">
     <rdf:RDF>
@@ -33,8 +33,8 @@
      bordercolor="#666666"
      borderopacity="1"
      inkscape:current-layer="layer10"
-     inkscape:cx="6.3299458"
-     inkscape:cy="10.33898"
+     inkscape:cx="-23.582602"
+     inkscape:cy="64.367205"
      gridtolerance="10"
      inkscape:guide-bbox="true"
      guidetolerance="10"
@@ -55,12 +55,12 @@
      inkscape:snap-nodes="false"
      inkscape:snap-others="false"
      inkscape:snap-to-guides="true"
-     inkscape:window-height="873"
-     inkscape:window-maximized="0"
-     inkscape:window-width="1073"
-     inkscape:window-x="808"
-     inkscape:window-y="28"
-     inkscape:zoom="11.313708"
+     inkscape:window-height="1011"
+     inkscape:window-maximized="1"
+     inkscape:window-width="1920"
+     inkscape:window-x="1920"
+     inkscape:window-y="27"
+     inkscape:zoom="3.9999998"
      inkscape:snap-page="false">
     <inkscape:grid
        empspacing="2"
@@ -83,11 +83,11 @@
        id="guide3820" />
     <sodipodi:guide
        orientation="1,0"
-       position="16.086679,11.534679"
+       position="128.00001,94.750004"
        id="guide3849" />
     <sodipodi:guide
        orientation="0,1"
-       position="-3.8448931,16.042485"
+       position="41.250002,128.00001"
        id="guide4007" />
   </sodipodi:namedview>
   <title
@@ -106,15 +106,15 @@
      inkscape:label="devices"
      transform="translate(359,-487)">
     <rect
-       style="fill:#bebebe;fill-opacity:1;fill-rule:evenodd;stroke:#bebebe;stroke-width:2.42592096;stroke-linecap:butt;stroke-linejoin:round;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none"
+       style="fill:#bebebe;fill-opacity:1;fill-rule:evenodd;stroke:#bebebe;stroke-width:19.28315735;stroke-linecap:butt;stroke-linejoin:round;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none"
        id="rect3016"
-       width="6.2550316"
-       height="13.749149"
-       x="-354.12753"
-       y="488.17047" />
+       width="49.920872"
+       height="108.84943"
+       x="-320.49966"
+       y="496.64157" />
     <g
        id="g3100"
-       transform="translate(0,-0.094525)">
+       transform="matrix(7.9809143,0,0,7.9168122,2505.7618,-3368.8607)">
       <path
          style="font-size:xx-small;font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;text-indent:0;text-align:start;text-decoration:none;line-height:normal;letter-spacing:normal;word-spacing:normal;text-transform:none;direction:ltr;block-progression:tb;writing-mode:lr-tb;text-anchor:start;baseline-shift:baseline;color:#000000;fill:#bebebe;fill-opacity:1;stroke:none;stroke-width:1;marker:none;visibility:visible;display:inline;overflow:visible;enable-background:new;font-family:sans-serif;-inkscape-font-specification:sans-serif"
          id="path3881-5"
@@ -142,7 +142,7 @@
          inkscape:connector-curvature="0" />
     </g>
     <g
-       transform="translate(13.042489,-0.094525)"
+       transform="matrix(7.9809143,0,0,7.9168122,2609.8528,-3368.8607)"
        id="g3100-8">
       <path
          style="font-size:xx-small;font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;text-indent:0;text-align:start;text-decoration:none;line-height:normal;letter-spacing:normal;word-spacing:normal;text-transform:none;direction:ltr;block-progression:tb;writing-mode:lr-tb;text-anchor:start;baseline-shift:baseline;color:#000000;fill:#bebebe;fill-opacity:1;stroke:none;stroke-width:1;marker:none;visibility:visible;display:inline;overflow:visible;enable-background:new;font-family:sans-serif;-inkscape-font-specification:sans-serif"
