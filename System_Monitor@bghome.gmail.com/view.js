@@ -1,13 +1,13 @@
 const Lang = imports.lang;
 const Panel = imports.ui.main.panel;
 const PanelMenu = imports.ui.panelMenu;
-const PopupMenu = imports.ui.popupMenu;
 const St = imports.gi.St;
 
 const Me = imports.misc.extensionUtils.getCurrentExtension();
 const FactoryModule = Me.imports.factory;
 const Convenience = Me.imports.convenience;
 const PrefsKeys = Me.imports.prefs_keys;
+const Widget = Me.imports.widget;
 
 const Menu = new Lang.Class({
     Name: 'Menu',
@@ -32,7 +32,20 @@ const Menu = new Lang.Class({
         }
 
     	this.actor.add_actor(this._layout);
-    	this.menu.addMenuItem(new PopupMenu.PopupMenuItem('lorem ipsum', {}));
+        
+        // TODO test what happens when too many items are added to the menu
+        // TODO create a factory method for instantiating widgets
+    	this.menu.addMenuItem(new Widget.ResourceTitleItem('CPU', FactoryModule.AbstractFactory.create('icon', PrefsKeys.CPU_METER, {icon_size: 32}), '24%'));
+        this.menu.addMenuItem(new Widget.ProcessItem('/usr/bin/bash', "edit-delete-symbolic", function(){log('close has been clicked!')}));
+        this.menu.addMenuItem(new Widget.ProcessItem('/usr/bin/firefox', "edit-delete-symbolic", function(){log('close has been clicked!')}));
+        this.menu.addMenuItem(new Widget.ProcessItem('/usr/bin/gedit', "edit-delete-symbolic", function(){log('close has been clicked!')}));
+        this.menu.addMenuItem(new Widget.Separator());
+        this.menu.addMenuItem(new Widget.ResourceTitleItem('RAM', FactoryModule.AbstractFactory.create('icon', PrefsKeys.MEMORY_METER, {icon_size: 32}), '4500MB/16012MB'));
+        this.menu.addMenuItem(new Widget.ProcessItem('/usr/bin/java', "edit-delete-symbolic", function(){log('close has been clicked!')}));
+        this.menu.addMenuItem(new Widget.ProcessItem('/usr/bin/firefox', "edit-delete-symbolic", function(){log('close has been clicked!')}));
+        this.menu.addMenuItem(new Widget.ProcessItem('/usr/bin/Xorg', "edit-delete-symbolic", function(){log('close has been clicked!')}));
+        this.menu.addMenuItem(new Widget.Separator());
+
     	Panel.addToStatusArea('system-monitor', this, 1, 'center');
     },
     _createIcon: function(type) {
