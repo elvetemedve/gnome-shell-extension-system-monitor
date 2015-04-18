@@ -108,7 +108,7 @@ const MemoryMeter = function() {
 		let statistics = {};
 		let file = FactoryModule.AbstractFactory.create('file', this, '/proc/meminfo');
 		let columns = ['memtotal','memfree','buffers','cached'];
-		
+
 		for (let index in columns) {
 			statistics[columns[index]] = parseInt(file.getContents().match(new RegExp(columns[index] + '.*?(\\d+)', 'i')).pop());
 		}
@@ -166,7 +166,7 @@ const NetworkMeter = function() {
 				statistics[device_name].tx_bytes = parseInt(file.getContents());
 			}
 		}
-		
+
 		return statistics;
 	};
 
@@ -232,7 +232,7 @@ const SwapMeter = function() {
 		let statistics = {};
 		let file = FactoryModule.AbstractFactory.create('file', this, '/proc/meminfo');
 		let columns = ['swaptotal','swapfree'];
-		
+
 		for (let index in columns) {
 			statistics[columns[index]] = parseInt(file.getContents().match(new RegExp(columns[index] + '.*?(\\d+)', 'i')).pop());
 		}
@@ -242,7 +242,7 @@ const SwapMeter = function() {
 	this.calculateUsage = function() {
 		let stat = this.loadData();
 		let used = stat.swaptotal - stat.swapfree;
-		this.usage = used / stat.swaptotal * 100;
+		this.usage = stat.swaptotal == 0 ? 0 : used / stat.swaptotal * 100;
 		return this.usage;
 	};
 
@@ -272,7 +272,7 @@ const SystemLoadMeter = function() {
 		let file = FactoryModule.AbstractFactory.create('file', this, '/proc/loadavg');
 		let reverse_data = file.getContents().split(' ').reverse();
 		let columns = ['oneminute'];
-		
+
 		for (let index in columns) {
 			statistics[columns[index]] = parseFloat(reverse_data.pop());
 		}

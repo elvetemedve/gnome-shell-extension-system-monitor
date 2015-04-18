@@ -29,6 +29,10 @@ Icon.initCautionClass = function(name) {
 
 // Change the color of the icon by interpolating the color range.
 Icon.prototype.setProgress = function(percent) {
+  if (isNaN(percent)) {
+      throw new TypeError('Percent parameter must be a number, but "' + percent + '" given.');
+  }
+
 	if (percent <= 0 || color_range.length < 2) {
 		this.style = '';
 		return this;
@@ -61,7 +65,7 @@ Icon.prototype.cautionOn = function() {
 // Change icon state to normal
 Icon.prototype.cautionOff = function() {
 	this.remove_style_class_name(caution_class);
-	return this;	
+	return this;
 }
 
 Icon.prototype.update = function(state) {
