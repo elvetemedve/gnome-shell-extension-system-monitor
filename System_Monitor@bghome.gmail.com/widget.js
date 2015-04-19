@@ -3,18 +3,18 @@ const St = imports.gi.St;
 const Lang = imports.lang;
 
 let BaseMenuItem = new Lang.Class({
-    Name: "ResourceTitleItem",
+    Name: "BaseMenuItem",
     Extends: PopupMenu.PopupBaseMenuItem,
 
     _init: function(text, options) {
         options = options || {};
-        let icon = options.icon, summary_text = options.summary_text, button_icon = options.button_icon, button_callback = options.button_callback; 
+        let icon = options.icon, summary_text = options.summary_text, button_icon = options.button_icon, button_callback = options.button_callback;
         delete options.icon;
         delete options.summary_text;
         delete options.button_icon;
         delete options.button_callback;
         this.parent(options);
-        
+
         if (icon) {
             this.icon = icon;
             this.actor.add(this.icon);
@@ -51,6 +51,10 @@ let BaseMenuItem = new Lang.Class({
         this.icon.set_child(icon);
     },
 
+    setSummaryText: function(text) {
+        this.rightLabel.text = text;
+    },
+
     hideButton: function() {
         this.button.hide();
     },
@@ -81,4 +85,44 @@ const ProcessItem = new Lang.Class({
 const Separator = new Lang.Class({
     Name: "Separator",
     Extends: PopupMenu.PopupSeparatorMenuItem
+});
+
+const MeterAreaContainer = new Lang.Class({
+    Name: "MeterAreaContainer",
+    Extends: St.BoxLayout,
+
+    _init: function() {
+        this.parent({"accessible-name": 'meterArea', "vertical": false});
+    },
+    addMeter: function(meter) {
+        if (!meter instanceof MeterContainer) {
+            throw new TypeError("First argument of addMeter() method must be instance of MeterContainer.");
+        }
+        this.add_actor(meter);
+    }
+});
+
+const MeterContainer = new Lang.Class({
+    Name: "MeterContainer",
+    Extends: St.BoxLayout,
+
+    _init: function() {
+        this.parent({"vertical": true});
+    },
+    addTitleItem: function(item) {
+        if (!item instanceof ResourceTitleItem) {
+            throw new TypeError("First argument of addTitleItem() method must be instance of ResourceTitleItem.");
+        }
+        this.add_actor(item.actor);
+        this._label_item = item;
+    },
+    addMenuItem: function(item) {
+        if (!item instanceof BaseMenuItem) {
+            throw new TypeError("First argument of addMenuItem() method must be instance of BaseMenuItem.");
+        }
+        this.add_actor(item.actor);
+    },
+    update: function(state) {
+        this._label_item.setSummaryText(Math.round(state.percent) + ' %');
+    }
 });

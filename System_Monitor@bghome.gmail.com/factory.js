@@ -2,16 +2,16 @@ const Me = imports.misc.extensionUtils.getCurrentExtension();
 const IndicatorModule = Me.imports.indicator;
 const MeterModule = Me.imports.meter;
 const FileModule = Me.imports.file;
+const Widget = Me.imports.widget;
 
 const Lang = imports.lang;
 const Gio = imports.gi.Gio;
 const PrefsKeys = Me.imports.prefs_keys;
 
-
 const AbstractFactory = (function() {
- 
+
     var types = {};
- 
+
     return {
     	// Additional arguments will be passed to the registered object.
         create: function (type) {
@@ -22,8 +22,8 @@ const AbstractFactory = (function() {
             	args.shift();
             	return factory.create.apply(factory, args);
 			}
-            
-            throw 'Unknown factory type"' + type + '" given.';
+
+            throw new RangeError('Unknown factory type"' + type + '" given.');
         },
 
         destroy: function (type) {
@@ -34,10 +34,10 @@ const AbstractFactory = (function() {
             	args.shift();
             	return factory.destroy.apply(factory, args);
 			}
-            
-            throw 'Unknown factory type"' + type + '" given.';
+
+            throw new RangeError('Unknown factory type"' + type + '" given.');
         },
- 
+
  		// Register an object factory.
         registerObject: function(type, Class) {
             types[type] = Class;
@@ -64,7 +64,7 @@ IconFactory.prototype.create = function(type, options) {
 
 	let constructor_options = default_options;
 	Lang.copyProperties(options, constructor_options);
-	
+
 	if (type == PrefsKeys.STORAGE_METER) {
 		constructor_options.icon_name = 'drive-harddisk-symbolic';
 	} else if (type == PrefsKeys.NETWORK_METER) {
@@ -78,7 +78,7 @@ IconFactory.prototype.create = function(type, options) {
 	} else if (type == PrefsKeys.SWAP_METER) {
 		constructor_options.gicon = Gio.icon_new_for_string('swap-symbolic');
 	} else {
-		throw 'Unknown indicator type "' + type + '" given.';
+		throw new RangeError('Unknown indicator type "' + type + '" given.');
 	}
 
 	IconFactory.prototype.concreteClass.initColorRange(
@@ -108,13 +108,13 @@ MeterFactory.prototype.create = function(type, options) {
 	} else if (type == PrefsKeys.STORAGE_METER) {
 		class_name = MeterModule.StorageMeter;
 	} else if (type == PrefsKeys.NETWORK_METER) {
-		class_name = MeterModule.NetworkMeter;		
+		class_name = MeterModule.NetworkMeter;
 	} else if (type == PrefsKeys.SWAP_METER) {
 		class_name = MeterModule.SwapMeter;
 	} else if (type == PrefsKeys.LOAD_METER) {
 		class_name = MeterModule.SystemLoadMeter;
 	} else {
-		throw 'Unknown meter type "' + type + '" given.';
+		throw new RangeError('Unknown meter type "' + type + '" given.');
 	}
 
 	return new class_name(options);
@@ -152,3 +152,44 @@ const FileFactory = (function() {
 })();
 
 AbstractFactory.registerObject('file', FileFactory);
+
+
+const MeterAreaWidgetFactory = function() {};
+
+MeterAreaWidgetFactory.prototype.create = function(options) {
+    return new Widget.MeterAreaContainer();
+}
+
+AbstractFactory.registerObject('meter-area-widget', MeterAreaWidgetFactory);
+
+
+const MeterWidgetFactory = function() {};
+
+MeterWidgetFactory.prototype.create = function(type, options) {
+	let title;
+	if (type == PrefsKeys.CPU_METER) {
+		title = 'CPU';
+	} else if (type == PrefsKeys.MEMORY_METER) {
+		title = 'RAM';
+	} else if (type == PrefsKeys.STORAGE_METER) {
+		title = 'Storage';
+	} else if (type == PrefsKeys.NETWORK_METER) {
+		title = 'Network';
+	} else if (type == PrefsKeys.SWAP_METER) {
+		title = 'Virtual memory';
+	} else if (type == PrefsKeys.LOAD_METER) {
+		title = 'System load';
+	} else {
+		throw new RangeError('Unknown meter type "' + type + '" given.');
+	}
+
+    let meter_widget = new Widget.MeterContainer();
+
+    meter_widget.addTitleItem(new Widget.ResourceTitleItem(title, AbstractFactory.create('icon', type, {icon_size: 32}), 'loading...'));
+    meter_widget.addMenuItem(new Widget.ProcessItem('/usr/bin/bash', "edit-delete-symbolic", function(){log('close has been clicked!')}));
+    meter_widget.addMenuItem(new Widget.ProcessItem('/usr/bin/vim', "edit-delete-symbolic", function(){log('close has been clicked!')}));
+
+	return meter_widget;
+}
+
+AbstractFactory.registerObject('meter-widget', MeterWidgetFactory);

@@ -7,7 +7,6 @@ const Me = imports.misc.extensionUtils.getCurrentExtension();
 const FactoryModule = Me.imports.factory;
 const Convenience = Me.imports.convenience;
 const PrefsKeys = Me.imports.prefs_keys;
-const Widget = Me.imports.widget;
 
 const Menu = new Lang.Class({
     Name: 'Menu',
@@ -17,34 +16,25 @@ const Menu = new Lang.Class({
     _event_handler_ids: [],
 
     _init: function() {
-    	let menuAlignment = 0.0;
+    	let menuAlignment = 0.5;
     	this.parent(menuAlignment);
     	this._layout = new St.BoxLayout();
         this._settings = Convenience.getSettings();
         this.available_meters = [PrefsKeys.CPU_METER, PrefsKeys.MEMORY_METER, PrefsKeys.STORAGE_METER, PrefsKeys.NETWORK_METER, PrefsKeys.SWAP_METER, PrefsKeys.LOAD_METER];
-        
+
+        let widget_area_container = FactoryModule.AbstractFactory.create('meter-area-widget');
+        this.menu.box.add_child(widget_area_container);
+
         for (let index in this.available_meters) {
             let type = this.available_meters[index];
             if (this._settings.get_boolean(type)) {
                 this._createIcon(type);
+                this._createMeterWidget(widget_area_container, type);
             }
             this._addSettingChangedHandler(type);
         }
 
     	this.actor.add_actor(this._layout);
-        
-        // TODO test what happens when too many items are added to the menu
-        // TODO create a factory method for instantiating widgets
-    	this.menu.addMenuItem(new Widget.ResourceTitleItem('CPU', FactoryModule.AbstractFactory.create('icon', PrefsKeys.CPU_METER, {icon_size: 32}), '24%'));
-        this.menu.addMenuItem(new Widget.ProcessItem('/usr/bin/bash', "edit-delete-symbolic", function(){log('close has been clicked!')}));
-        this.menu.addMenuItem(new Widget.ProcessItem('/usr/bin/firefox', "edit-delete-symbolic", function(){log('close has been clicked!')}));
-        this.menu.addMenuItem(new Widget.ProcessItem('/usr/bin/gedit', "edit-delete-symbolic", function(){log('close has been clicked!')}));
-        this.menu.addMenuItem(new Widget.Separator());
-        this.menu.addMenuItem(new Widget.ResourceTitleItem('RAM', FactoryModule.AbstractFactory.create('icon', PrefsKeys.MEMORY_METER, {icon_size: 32}), '4500MB/16012MB'));
-        this.menu.addMenuItem(new Widget.ProcessItem('/usr/bin/java', "edit-delete-symbolic", function(){log('close has been clicked!')}));
-        this.menu.addMenuItem(new Widget.ProcessItem('/usr/bin/firefox', "edit-delete-symbolic", function(){log('close has been clicked!')}));
-        this.menu.addMenuItem(new Widget.ProcessItem('/usr/bin/Xorg', "edit-delete-symbolic", function(){log('close has been clicked!')}));
-        this.menu.addMenuItem(new Widget.Separator());
 
     	Panel.addToStatusArea('system-monitor', this, 1, 'center');
     },
@@ -83,6 +73,11 @@ const Menu = new Lang.Class({
         for (let index in this._event_handler_ids) {
             this._settings.disconnect(this._event_handler_ids[index]);
         }
+    },
+    _createMeterWidget: function(widget_area_container, type) {
+        let meter_widget = FactoryModule.AbstractFactory.create('meter-widget', type);
+        widget_area_container.addMeter(meter_widget);
+        this._meters[type].addObserver(meter_widget);
     },
     destroy: function() {
         let meters = this._meters;

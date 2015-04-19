@@ -15,6 +15,12 @@ icons and indicate their usage by color.
 No clicks or key presses needed, just take a look at the top of the screen.
 
 ## Build
+
+### Requirements
+The following applications need to be installed:
+- zip
+- rake
+
 Project can be built with Rake (http://rake.rubyforge.org/).
 To install Rake, first you need RubyGems package manager which is available via the own package manager
 of the OS. One you have that, issue the following command:
