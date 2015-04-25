@@ -69,7 +69,7 @@ const ResourceTitleItem = new Lang.Class({
     Extends: BaseMenuItem,
 
     _init: function(text, icon, summary_text) {
-        this.parent(text, {"icon": icon, "summary_text": summary_text, "hover": false, "can_focus": false, "reactive": false});
+        this.parent(text, {"icon": icon, "summary_text": summary_text, style_class:"resource-title", "hover": false, "activate": false});
     }
 });
 

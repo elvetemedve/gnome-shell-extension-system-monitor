@@ -1,4 +1,10 @@
-.indicator-caution {
+.indicator-caution
+{
 	background-color: rgba(160, 160, 160, 0.7);
 	border-radius: 1em;
+}
+
+.resource-title
+{
+	font-weight: bold;
 }
