@@ -82,6 +82,24 @@ const ProcessItem = new Lang.Class({
     }
 });
 
+const MountItem = new Lang.Class({
+    Name: "MountItem",
+    Extends: BaseMenuItem,
+
+    _init: function(text) {
+        this.parent(text, {"activate": false});
+    }
+});
+
+const StateItem = new Lang.Class({
+    Name: "StateItem",
+    Extends: BaseMenuItem,
+
+    _init: function(text) {
+        this.parent(text, {"activate": false});
+    }
+});
+
 const Separator = new Lang.Class({
     Name: "Separator",
     Extends: PopupMenu.PopupSeparatorMenuItem
@@ -106,8 +124,10 @@ const MeterContainer = new Lang.Class({
     Name: "MeterContainer",
     Extends: St.BoxLayout,
 
-    _init: function() {
+    _init: function(factoryMethod) {
         this.parent({"vertical": true});
+        this._menu_items = [];
+        this._factoryMethod = factoryMethod;
     },
     addTitleItem: function(item) {
         if (!item instanceof ResourceTitleItem) {
@@ -121,8 +141,20 @@ const MeterContainer = new Lang.Class({
             throw new TypeError("First argument of addMenuItem() method must be instance of BaseMenuItem.");
         }
         this.add_actor(item.actor);
+        this._menu_items.push(item.actor);
+    },
+    removeAllMenuItems: function() {
+        for (let actor of this._menu_items) {
+            this.remove_actor(actor);
+            actor.destroy();
+        }
+        this._menu_items.length = 0;
     },
     update: function(state) {
         this._label_item.setSummaryText(Math.round(state.percent) + ' %');
+        this.removeAllMenuItems();
+        for (let i = 1; i <=3; i++) {
+            this.addMenuItem(this._factoryMethod(state));
+        }
     }
 });

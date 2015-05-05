@@ -183,13 +183,38 @@ MeterWidgetFactory.prototype.create = function(type, options) {
 		throw new RangeError('Unknown meter type "' + type + '" given.');
 	}
 
-    let meter_widget = new Widget.MeterContainer();
+    let factoryMethod = function(state) {
+        return AbstractFactory.create('meter-widget-item', type, state);
+    };
+    let meter_widget = new Widget.MeterContainer(factoryMethod);
 
     meter_widget.addTitleItem(new Widget.ResourceTitleItem(title, AbstractFactory.create('icon', type, {icon_size: 32}), 'loading...'));
-    meter_widget.addMenuItem(new Widget.ProcessItem('/usr/bin/bash', "edit-delete-symbolic", function(){log('close has been clicked!')}));
-    meter_widget.addMenuItem(new Widget.ProcessItem('/usr/bin/vim', "edit-delete-symbolic", function(){log('close has been clicked!')}));
 
 	return meter_widget;
 }
 
 AbstractFactory.registerObject('meter-widget', MeterWidgetFactory);
+
+
+const MeterWidgetItemFactory = function() {};
+
+MeterWidgetItemFactory.prototype.create = function(type, options) {
+	switch (type) {
+        case PrefsKeys.CPU_METER:
+        case PrefsKeys.MEMORY_METER:
+        case PrefsKeys.NETWORK_METER:
+        case PrefsKeys.SWAP_METER:
+            return new Widget.ProcessItem('/usr/bin/random' + Math.floor( Math.random() * 100 ), "edit-delete-symbolic", function(){log('close has been clicked!')});
+
+        case PrefsKeys.STORAGE_METER:
+            return new Widget.MountItem('/dev/sda1');
+
+        case PrefsKeys.LOAD_METER:
+            return new Widget.StateItem('5 running tasks');
+
+        default:
+            throw new RangeError('Unknown meter type "' + type + '" given.');
+    }
+}
+
+AbstractFactory.registerObject('meter-widget-item', MeterWidgetItemFactory);
