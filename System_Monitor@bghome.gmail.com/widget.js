@@ -1,6 +1,7 @@
 const PopupMenu = imports.ui.popupMenu;
 const St = imports.gi.St;
 const Lang = imports.lang;
+const Main = imports.ui.main;
 
 let BaseMenuItem = new Lang.Class({
     Name: "BaseMenuItem",
@@ -8,11 +9,13 @@ let BaseMenuItem = new Lang.Class({
 
     _init: function(text, options) {
         options = options || {};
-        let icon = options.icon, summary_text = options.summary_text, button_icon = options.button_icon, button_callback = options.button_callback;
+        let icon = options.icon, summary_text = options.summary_text, button_icon = options.button_icon, button_callback = options.button_callback,
+        button_trigger_key = options.button_trigger_key;
         delete options.icon;
         delete options.summary_text;
         delete options.button_icon;
         delete options.button_callback;
+        delete options.button_trigger_key;
         this.parent(options);
 
         if (icon) {
@@ -20,19 +23,22 @@ let BaseMenuItem = new Lang.Class({
             this.actor.add(this.icon);
         }
 
-        this.label = new St.Label({text: text});
+        this.label = new St.Label({text: text, style_class: "item-label"});
         this.labelBin = new St.Bin({child: this.label});
         this.actor.add(this.labelBin);
+        this.connect('active-changed', Lang.bind(this, this._activeChanged));
 
         if (summary_text) {
-            this.rightLabel = new St.Label({text: summary_text});
+            this.rightLabel = new St.Label({text: summary_text, style_class: "right-label"});
             this.rightLabelBin = new St.Bin({child: this.rightLabel});
             this.actor.add(this.rightLabelBin, {expand: true, x_fill: false, x_align: St.Align.END});
         }
 
         if (button_icon) {
             this.button = new St.Button();
-            this.button.connect('clicked', button_callback);
+            this.button.connect('clicked', Lang.bind(this, function(actor, event) {
+                button_callback.call(this.button, actor, event, this.getState());
+            }));
             this.button_icon = new St.Icon({
                 icon_name: button_icon,
                 icon_size: 14,
@@ -41,6 +47,11 @@ let BaseMenuItem = new Lang.Class({
             this.button.set_child(this.button_icon);
             this.actor.add(this.button, {expand: true, x_fill: false, x_align: St.Align.END});
         }
+    },
+
+    _activeChanged: function() {
+        // Expand ellipsized label.
+        this.label.clutter_text.set_line_wrap(this.active);
     },
 
     setLabel: function(text) {
@@ -61,6 +72,14 @@ let BaseMenuItem = new Lang.Class({
 
     showButton: function() {
         this.button.show();
+    },
+
+    setState: function(state) {
+        this._state = state;
+    },
+
+    getState: function() {
+        return this._state || {};
     }
 });
 
@@ -77,8 +96,8 @@ const ProcessItem = new Lang.Class({
     Name: "ProcessItem",
     Extends: BaseMenuItem,
 
-    _init: function(text, button_icon, button_callback) {
-        this.parent(text, {"button_icon": button_icon, "button_callback": button_callback, "activate": false});
+    _init: function(text, button_icon, button_callback, button_trigger_key) {
+        this.parent(text, {"button_icon": button_icon, "button_callback": button_callback, "button_trigger_key": button_trigger_key, "activate": false});
     }
 });
 
@@ -124,10 +143,9 @@ const MeterContainer = new Lang.Class({
     Name: "MeterContainer",
     Extends: St.BoxLayout,
 
-    _init: function(factoryMethod) {
+    _init: function() {
         this.parent({"vertical": true});
         this._menu_items = [];
-        this._factoryMethod = factoryMethod;
     },
     addTitleItem: function(item) {
         if (!item instanceof ResourceTitleItem) {
@@ -141,20 +159,38 @@ const MeterContainer = new Lang.Class({
             throw new TypeError("First argument of addMenuItem() method must be instance of BaseMenuItem.");
         }
         this.add_actor(item.actor);
-        this._menu_items.push(item.actor);
+        this._menu_items.push(item);
     },
     removeAllMenuItems: function() {
-        for (let actor of this._menu_items) {
-            this.remove_actor(actor);
-            actor.destroy();
+        for (let item of this._menu_items) {
+            this.remove_actor(item.actor);
+            item.actor.destroy();
         }
         this._menu_items.length = 0;
     },
     update: function(state) {
         this._label_item.setSummaryText(Math.round(state.percent) + ' %');
-        this.removeAllMenuItems();
-        for (let i = 1; i <=3; i++) {
-            this.addMenuItem(this._factoryMethod(state));
+    }
+});
+
+const ProcessItemsContainer = new Lang.Class({
+    Name: "ProcessItemsContainer",
+    Extends: MeterContainer,
+
+    update: function(state) {
+        MeterContainer.prototype.update.call(this, state);
+
+        for (let i = 0; i < this._menu_items.length; i++) {
+            if (i in state.processes) {
+                let process = state.processes[i];
+                this._menu_items[i].setLabel(process.command);
+                this._menu_items[i].showButton();
+                this._menu_items[i].setState(process);
+            } else {
+                this._menu_items[i].setLabel('');
+                this._menu_items[i].hideButton();
+                this._menu_items[i].setState({});
+            }
         }
     }
 });

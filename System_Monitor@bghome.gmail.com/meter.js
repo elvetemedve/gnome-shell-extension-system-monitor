@@ -1,4 +1,5 @@
 const GTop = imports.gi.GTop;
+const Util = imports.misc.util;
 
 const Me = imports.misc.extensionUtils.getCurrentExtension();
 const FactoryModule = Me.imports.factory;
@@ -24,9 +25,9 @@ function MeterSubject() {
 		return -1;
 	};
 
-	this.notify = function(percent, has_activity) {
+	this.notify = function(percent, processes) {
 		for (let i = 0; i < this.observers.length; i++) {
-			this.observers[i].update({percent: percent, has_activity: has_activity});
+			this.observers[i].update({percent: percent, processes: processes});
 		}
 	};
 };
@@ -41,8 +42,26 @@ MeterSubject.prototype.removeObserver = function(observer) {
 
 MeterSubject.prototype.notifyAll = function() {
 	if (this.observers.length > 0) {
-		this.notify(this.calculateUsage(), false);
+		this.notify(this.calculateUsage(), this.getProcesses());
 	}
+};
+
+/**
+ * Calculate the resource usage and return a percentage value.
+ */
+MeterSubject.prototype.calculateUsage = function() {
+	return 0.0;
+};
+
+/**
+ * Return the list of processed associated by the measured resource.
+ *
+ * The returned array expected to be sorted by usage and be in descending order.
+ * A process object should be like this:
+ * { "command": "/path/to/binary", "id": 123 }
+ */
+MeterSubject.prototype.getProcesses = function() {
+	return [];
 };
 
 MeterSubject.prototype.destroy = function() {};
@@ -91,6 +110,43 @@ const CpuMeter = function() {
 		this.usage = usage_calculator(periods.cpu);
 		return this.usage;
 	};
+
+	this._getProcessIds = function() {
+		let file = FactoryModule.AbstractFactory.create('file', this, '/proc');
+		let files = file.list();
+		let ids = [];
+		for (let i in files) {
+			let id = parseInt(files[i]);
+			if (!isNaN(id)) {
+				ids.push(id);
+			}
+		}
+		return ids;
+	};
+
+	this.getProcesses = function() {
+		let process_ids = this._getProcessIds();
+		let process_time = new GTop.glibtop_proc_time();
+		let process_stats = [];
+		for (var i = 0; i < process_ids.length; i++) {
+			GTop.glibtop_get_proc_time(process_time, process_ids[i]);
+			process_stats.push ({"pid": process_ids[i], "time": process_time.rtime});
+		}
+		process_stats.sort(function(a, b) {
+			return (a.time > b.time) ? -1 : (a.time < b.time ? 1 : 0);
+		});
+		process_stats = process_stats.slice(0, 3);	// Limit to top 3 processes.
+
+		let process_args = new GTop.glibtop_proc_args();
+		let result = [];
+		for (var i = 0; i < process_stats.length; i++) {
+			let pid = process_stats[i].pid;
+			let args = GTop.glibtop_get_proc_args(process_args, pid, 0);
+			result.push({"command": args, "pid": pid});
+		}
+
+		return result;
+	}
 
 	this.destroy = function() {
 		FactoryModule.AbstractFactory.destroy('file', this);

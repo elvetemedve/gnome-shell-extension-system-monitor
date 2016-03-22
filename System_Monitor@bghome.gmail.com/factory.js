@@ -3,6 +3,7 @@ const IndicatorModule = Me.imports.indicator;
 const MeterModule = Me.imports.meter;
 const FileModule = Me.imports.file;
 const Widget = Me.imports.widget;
+const Util = Me.imports.util;
 
 const Lang = imports.lang;
 const Gio = imports.gi.Gio;
@@ -166,30 +167,33 @@ AbstractFactory.registerObject('meter-area-widget', MeterAreaWidgetFactory);
 const MeterWidgetFactory = function() {};
 
 MeterWidgetFactory.prototype.create = function(type, options) {
-	let title;
+	let title, meter_widget;
 	if (type == PrefsKeys.CPU_METER) {
 		title = 'CPU';
+        meter_widget = new Widget.ProcessItemsContainer();
 	} else if (type == PrefsKeys.MEMORY_METER) {
 		title = 'RAM';
+        meter_widget = new Widget.ProcessItemsContainer();
 	} else if (type == PrefsKeys.STORAGE_METER) {
 		title = 'Storage';
+        meter_widget = new Widget.MeterContainer();
 	} else if (type == PrefsKeys.NETWORK_METER) {
 		title = 'Network';
+        meter_widget = new Widget.ProcessItemsContainer();
 	} else if (type == PrefsKeys.SWAP_METER) {
 		title = 'Virtual memory';
+        meter_widget = new Widget.ProcessItemsContainer();
 	} else if (type == PrefsKeys.LOAD_METER) {
 		title = 'System load';
+        meter_widget = new Widget.MeterContainer();
 	} else {
 		throw new RangeError('Unknown meter type "' + type + '" given.');
 	}
 
-    let factoryMethod = function(state) {
-        return AbstractFactory.create('meter-widget-item', type, state);
-    };
-    let meter_widget = new Widget.MeterContainer(factoryMethod);
-
     meter_widget.addTitleItem(new Widget.ResourceTitleItem(title, AbstractFactory.create('icon', type, {icon_size: 32}), 'loading...'));
-
+    for (var i = 0; i < 3; i++) {
+        meter_widget.addMenuItem(AbstractFactory.create('meter-widget-item', type, options));
+    }
 	return meter_widget;
 }
 
@@ -204,13 +208,16 @@ MeterWidgetItemFactory.prototype.create = function(type, options) {
         case PrefsKeys.MEMORY_METER:
         case PrefsKeys.NETWORK_METER:
         case PrefsKeys.SWAP_METER:
-            return new Widget.ProcessItem('/usr/bin/random' + Math.floor( Math.random() * 100 ), "edit-delete-symbolic", function(){log('close has been clicked!')});
+            return new Widget.ProcessItem('loading...', "edit-delete-symbolic", function(actor, event, state) {
+                log('Process called "{name}" with PID {pid} is going to be killed by user resuest.'.replace('{name}', state.command).replace('{pid}', state.pid));
+                (new Util.Process(state.pid)).kill();
+            });
 
         case PrefsKeys.STORAGE_METER:
-            return new Widget.MountItem('/dev/sda1');
+            return new Widget.MountItem('loading...');
 
         case PrefsKeys.LOAD_METER:
-            return new Widget.StateItem('5 running tasks');
+            return new Widget.StateItem('loading...');
 
         default:
             throw new RangeError('Unknown meter type "' + type + '" given.');

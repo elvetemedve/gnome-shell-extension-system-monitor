@@ -8,3 +8,14 @@
 {
 	font-weight: bold;
 }
+
+.right-label
+{
+	min-width: 3em;
+	text-align: right;
+}
+
+.item-label
+{
+	max-width: 12em;
+}
