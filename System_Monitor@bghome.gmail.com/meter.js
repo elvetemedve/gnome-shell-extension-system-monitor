@@ -1,8 +1,8 @@
 const GTop = imports.gi.GTop;
-const Util = imports.misc.util;
 
 const Me = imports.misc.extensionUtils.getCurrentExtension();
 const FactoryModule = Me.imports.factory;
+const Util = Me.imports.util;
 
 function MeterSubject() {
 	this.observers = [];
@@ -111,42 +111,18 @@ const CpuMeter = function() {
 		return this.usage;
 	};
 
-	this._getProcessIds = function() {
-		let file = FactoryModule.AbstractFactory.create('file', this, '/proc');
-		let files = file.list();
-		let ids = [];
-		for (let i in files) {
-			let id = parseInt(files[i]);
-			if (!isNaN(id)) {
-				ids.push(id);
-			}
-		}
-		return ids;
-	};
-
 	this.getProcesses = function() {
-		let process_ids = this._getProcessIds();
+		let processes = new Util.Processes;
+		let process_ids = processes.getIds();
 		let process_time = new GTop.glibtop_proc_time();
 		let process_stats = [];
-		for (var i = 0; i < process_ids.length; i++) {
+		for (let i = 0; i < process_ids.length; i++) {
 			GTop.glibtop_get_proc_time(process_time, process_ids[i]);
 			process_stats.push ({"pid": process_ids[i], "time": process_time.rtime});
 		}
-		process_stats.sort(function(a, b) {
-			return (a.time > b.time) ? -1 : (a.time < b.time ? 1 : 0);
-		});
-		process_stats = process_stats.slice(0, 3);	// Limit to top 3 processes.
 
-		let process_args = new GTop.glibtop_proc_args();
-		let result = [];
-		for (var i = 0; i < process_stats.length; i++) {
-			let pid = process_stats[i].pid;
-			let args = GTop.glibtop_get_proc_args(process_args, pid, 0);
-			result.push({"command": args, "pid": pid});
-		}
-
-		return result;
-	}
+		return processes.getTopProcesses(process_stats, "time", 3);
+	};
 
 	this.destroy = function() {
 		FactoryModule.AbstractFactory.destroy('file', this);
@@ -176,6 +152,24 @@ const MemoryMeter = function() {
 		let used = stat.memtotal - stat.memfree - stat.buffers - stat.cached;
 		this.usage = used / stat.memtotal * 100;
 		return this.usage;
+	};
+
+	this.getProcesses = function() {
+		let processes = new Util.Processes;
+		let process_ids = processes.getIds();
+		let process_memory = new GTop.glibtop_proc_mem();
+		let process_stats = [];
+		for (let i = 0; i < process_ids.length; i++) {
+			GTop.glibtop_get_proc_mem(process_memory, process_ids[i]);
+			process_stats.push (
+				{
+					"pid": process_ids[i],
+					"memory": process_memory.vsize + process_memory.resident + process_memory.share
+				}
+			);
+		}
+
+		return processes.getTopProcesses(process_stats, "memory", 3);
 	};
 
 	this.destroy = function() {
