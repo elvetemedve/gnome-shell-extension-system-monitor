@@ -296,6 +296,29 @@ const SwapMeter = function() {
 		return this.usage;
 	};
 
+	this.getProcesses = function() {
+		let processes = new Util.Processes;
+		let process_ids = processes.getIds();
+		let process_stats = [];
+		for (let i = 0; i < process_ids.length; i++) {
+			let number_of_pages_swapped;
+			try {
+				let file = FactoryModule.AbstractFactory.create('file', this, '/proc/' + process_ids[i] + '/stat');
+				number_of_pages_swapped = parseInt(file.getContents().split(' ')[35]);
+			} catch (e) {
+				number_of_pages_swapped = 0;
+			}
+			process_stats.push (
+				{
+					"pid": process_ids[i],
+					"memory": number_of_pages_swapped
+				}
+			);
+		}
+
+		return processes.getTopProcesses(process_stats, "memory", 3);
+	};
+
 	this.destroy = function() {
 		FactoryModule.AbstractFactory.destroy('file', this);
 	};
