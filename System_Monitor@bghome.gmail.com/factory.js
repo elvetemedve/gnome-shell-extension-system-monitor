@@ -77,7 +77,7 @@ IconFactory.prototype.create = function(type, options) {
 	} else if (type == PrefsKeys.MEMORY_METER) {
 		constructor_options.gicon = Gio.icon_new_for_string('memory-symbolic');
 	} else if (type == PrefsKeys.SWAP_METER) {
-		constructor_options.gicon = Gio.icon_new_for_string('swap-symbolic');
+		constructor_options.icon_name = 'media-removable-symbolic';
 	} else {
 		throw new RangeError('Unknown indicator type "' + type + '" given.');
 	}
