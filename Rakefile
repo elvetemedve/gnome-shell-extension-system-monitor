@@ -65,7 +65,7 @@ task :uninstall, [:target] do |t, args|
 		raise "Unknown option for target '#{args.target}'."
 	end
 
-	if File.exists? target_dir
+	if File.exists? "#{target_dir}/#{PACKAGE_NAME}"
 		rm_r "#{target_dir}/#{PACKAGE_NAME}"
 		puts message
 	end
