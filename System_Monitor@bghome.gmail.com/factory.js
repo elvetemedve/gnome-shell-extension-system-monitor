@@ -185,7 +185,7 @@ MeterWidgetFactory.prototype.create = function(type, options) {
         meter_widget = new Widget.ProcessItemsContainer();
 	} else if (type == PrefsKeys.LOAD_METER) {
 		title = 'System load';
-        meter_widget = new Widget.MeterContainer();
+        meter_widget = new Widget.SystemLoadItemsContainer();
 	} else {
 		throw new RangeError('Unknown meter type "' + type + '" given.');
 	}

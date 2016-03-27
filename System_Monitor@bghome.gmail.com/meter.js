@@ -25,9 +25,9 @@ function MeterSubject() {
 		return -1;
 	};
 
-	this.notify = function(percent, processes) {
+	this.notify = function(percent, processes, system_load) {
 		for (let i = 0; i < this.observers.length; i++) {
-			this.observers[i].update({percent: percent, processes: processes});
+			this.observers[i].update({percent: percent, processes: processes, system_load: system_load});
 		}
 	};
 };
@@ -42,7 +42,7 @@ MeterSubject.prototype.removeObserver = function(observer) {
 
 MeterSubject.prototype.notifyAll = function() {
 	if (this.observers.length > 0) {
-		this.notify(this.calculateUsage(), this.getProcesses());
+		this.notify(this.calculateUsage(), this.getProcesses(), this.getSystemLoad());
 	}
 };
 
@@ -62,6 +62,21 @@ MeterSubject.prototype.calculateUsage = function() {
  */
 MeterSubject.prototype.getProcesses = function() {
 	return [];
+};
+
+/**
+ * Return information about system load.
+ *
+ * See the method body for expected data structure.
+ */
+MeterSubject.prototype.getSystemLoad = function() {
+	return {
+		'running_tasks_count': 0,
+		'tasks_count': 0,
+		'load_average_1': 0,
+		'load_average_5': 0,
+		'load_average_15': 0
+	};
 };
 
 MeterSubject.prototype.destroy = function() {};
@@ -357,6 +372,18 @@ const SystemLoadMeter = function() {
 		this.usage = stat.oneminute / this._getNumberOfCPUCores() * 100;
 		this.usage = this.usage > 100 ? 100 : this.usage;
 		return this.usage;
+	};
+
+	this.getSystemLoad = function() {
+		let load = new GTop.glibtop_loadavg();
+		GTop.glibtop_get_loadavg(load);
+		return {
+			'running_tasks_count': load.nr_running,
+			'tasks_count': load.nr_tasks,
+			'load_average_1': load.loadavg[0],
+			'load_average_5': load.loadavg[1],
+			'load_average_15': load.loadavg[2]
+		};
 	};
 
 	this.destroy = function() {

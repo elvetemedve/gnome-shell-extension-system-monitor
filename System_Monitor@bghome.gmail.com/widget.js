@@ -194,3 +194,23 @@ const ProcessItemsContainer = new Lang.Class({
         }
     }
 });
+
+const SystemLoadItemsContainer = new Lang.Class({
+    Name: "SystemLoadItemsContainer",
+    Extends: MeterContainer,
+
+    update: function(state) {
+        MeterContainer.prototype.update.call(this, state);
+
+        let load = state.system_load;
+        this._menu_items[0].setLabel(load.load_average_1 + ' / ' + load.load_average_5 + ' / ' + load.load_average_15);
+        this._menu_items[1].setLabel(
+            '%running% out of %all% tasks are running'
+                .replace('%running%', load.running_tasks_count)
+                .replace('%all%', load.tasks_count)
+        );
+        for (let i = 2; i < this._menu_items.length; i++) {
+            this._menu_items[i].setLabel('');
+        }
+    }
+});
