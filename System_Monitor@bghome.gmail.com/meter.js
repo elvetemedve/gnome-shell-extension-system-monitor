@@ -25,9 +25,16 @@ function MeterSubject() {
 		return -1;
 	};
 
-	this.notify = function(percent, processes, system_load) {
+	this.notify = function(percent, processes, system_load, directories) {
 		for (let i = 0; i < this.observers.length; i++) {
-			this.observers[i].update({percent: percent, processes: processes, system_load: system_load});
+			this.observers[i].update(
+				{
+					percent: percent,
+					processes: processes,
+					system_load: system_load,
+					directories: directories
+				}
+			);
 		}
 	};
 };
@@ -42,7 +49,12 @@ MeterSubject.prototype.removeObserver = function(observer) {
 
 MeterSubject.prototype.notifyAll = function() {
 	if (this.observers.length > 0) {
-		this.notify(this.calculateUsage(), this.getProcesses(), this.getSystemLoad());
+		this.notify(
+			this.calculateUsage(),
+			this.getProcesses(),
+			this.getSystemLoad(),
+			this.getDirectories()
+		);
 	}
 };
 
@@ -77,6 +89,17 @@ MeterSubject.prototype.getSystemLoad = function() {
 		'load_average_5': 0,
 		'load_average_15': 0
 	};
+};
+
+/**
+ * Return the list of examined directories.
+ *
+ * A directory item should be like this:
+ * { "name": "/tmp", "free_size": 12345 }
+ * where "free_size" is in bytes.
+ */
+MeterSubject.prototype.getDirectories = function() {
+	return [];
 };
 
 MeterSubject.prototype.destroy = function() {};
@@ -197,6 +220,12 @@ MemoryMeter.prototype = new MeterSubject();
 
 const StorageMeter = function() {
 	this.observers = [];
+	let mount_entry = new RegExp('^\\S+\\s+(\\S+)\\s+(\\S+)');
+	let fs_types_to_measure = [
+		'btrfs', 'exfat', 'ext2', 'ext3', 'ext4', 'f2fs',
+	 	'hfs', 'jfs', 'nilfs2', 'ntfs', 'reiser4', 'reiserfs', 'vfat', 'xfs',
+		'zfs'
+	];
 
 	this.loadData = function() {
 		let usage = new GTop.glibtop_fsusage();
@@ -206,6 +235,28 @@ const StorageMeter = function() {
 
 	this.calculateUsage = function() {
 		return this.loadData();
+	};
+
+	this.getDirectories = function() {
+		let directories = new Util.Directories;
+		let usage = new GTop.glibtop_fsusage();
+		let file = FactoryModule.AbstractFactory.create('file', this, '/proc/mounts');
+		let mount_list = file.getContents().split("\n");
+		mount_list.splice(-2);	// remove the last two empty lines
+		let directory_stats = [];
+		for (let i = 0; i < mount_list.length; i++) {
+			[, mount_dir, fs_type] = mount_list[i].match(mount_entry);
+			if (fs_types_to_measure.indexOf(fs_type) == -1) {
+				continue;
+			}
+			GTop.glibtop_get_fsusage(usage, mount_dir);
+			directory_stats.push({
+				'name': mount_dir,
+				'free_size': usage.bavail * usage.block_size
+			});
+		}
+
+		return directories.getTopDirectories(directory_stats, 'free_size', 3);
 	};
 };
 
@@ -323,12 +374,15 @@ const SwapMeter = function() {
 			} catch (e) {
 				number_of_pages_swapped = 0;
 			}
-			process_stats.push (
-				{
-					"pid": process_ids[i],
-					"memory": number_of_pages_swapped
-				}
-			);
+
+			if (number_of_pages_swapped > 0) {
+				process_stats.push (
+					{
+						"pid": process_ids[i],
+						"memory": number_of_pages_swapped
+					}
+				);
+			}
 		}
 
 		return processes.getTopProcesses(process_stats, "memory", 3);

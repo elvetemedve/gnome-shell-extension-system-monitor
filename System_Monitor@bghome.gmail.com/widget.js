@@ -3,6 +3,9 @@ const St = imports.gi.St;
 const Lang = imports.lang;
 const Main = imports.ui.main;
 
+const Me = imports.misc.extensionUtils.getCurrentExtension();
+const Util = Me.imports.util;
+
 let BaseMenuItem = new Lang.Class({
     Name: "BaseMenuItem",
     Extends: PopupMenu.PopupBaseMenuItem,
@@ -211,6 +214,33 @@ const SystemLoadItemsContainer = new Lang.Class({
         );
         for (let i = 2; i < this._menu_items.length; i++) {
             this._menu_items[i].setLabel('');
+        }
+    }
+});
+
+const DirectoriesContainer = new Lang.Class({
+    Name: "DirectoriesContainer",
+    Extends: MeterContainer,
+
+    _init: function() {
+        this.parent();
+        this._directories = new Util.Directories();
+    },
+
+    update: function(state) {
+        MeterContainer.prototype.update.call(this, state);
+
+        for (let i = 0; i < this._menu_items.length; i++) {
+            if (i in state.directories) {
+                let directory = state.directories[i];
+                this._menu_items[i].setLabel(
+                    '%mount_dir% (%size% free)'
+                        .replace('%mount_dir%', directory.name)
+                        .replace('%size%', this._directories.formatBytes(directory.free_size))
+                );
+            } else {
+                this._menu_items[i].setLabel('');
+            }
         }
     }
 });

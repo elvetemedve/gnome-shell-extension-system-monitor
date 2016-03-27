@@ -176,7 +176,7 @@ MeterWidgetFactory.prototype.create = function(type, options) {
         meter_widget = new Widget.ProcessItemsContainer();
 	} else if (type == PrefsKeys.STORAGE_METER) {
 		title = 'Storage';
-        meter_widget = new Widget.MeterContainer();
+        meter_widget = new Widget.DirectoriesContainer();
 	} else if (type == PrefsKeys.NETWORK_METER) {
 		title = 'Network';
         meter_widget = new Widget.ProcessItemsContainer();
