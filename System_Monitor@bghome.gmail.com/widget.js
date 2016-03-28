@@ -218,7 +218,7 @@ const ProcessItemsContainer = new Lang.Class({
                 this._menu_items[i].showButton();
                 this._menu_items[i].setState(process);
             } else {
-                this._menu_items[i].setLabel('');
+                this._menu_items[i].setLabel(' ');
                 this._menu_items[i].hideButton();
                 this._menu_items[i].setState({});
             }
@@ -241,7 +241,7 @@ const SystemLoadItemsContainer = new Lang.Class({
                 .replace('%all%', load.tasks_count)
         );
         for (let i = 2; i < this._menu_items.length; i++) {
-            this._menu_items[i].setLabel('');
+            this._menu_items[i].setLabel(' ');
         }
     }
 });
@@ -267,7 +267,7 @@ const DirectoriesContainer = new Lang.Class({
                         .replace('%size%', this._directories.formatBytes(directory.free_size))
                 );
             } else {
-                this._menu_items[i].setLabel('');
+                this._menu_items[i].setLabel(' ');
             }
         }
     }
