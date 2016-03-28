@@ -52,6 +52,14 @@ let BaseMenuItem = new Lang.Class({
         }
     },
 
+    destroy: function() {
+        this.disconnect('active-changed');
+        if (this.button instanceof St.Button) {
+            this.button.disconnect('clicked');
+        }
+        this.parent();
+    },
+
     _activeChanged: function() {
         // Expand ellipsized label.
         this.label.clutter_text.set_line_wrap(this.active);
@@ -134,11 +142,21 @@ const MeterAreaContainer = new Lang.Class({
     _init: function() {
         this.parent({"accessible-name": 'meterArea', "vertical": false});
     },
-    addMeter: function(meter) {
+    addMeter: function(meter, position) {
         if (!meter instanceof MeterContainer) {
             throw new TypeError("First argument of addMeter() method must be instance of MeterContainer.");
         }
-        this.add_actor(meter);
+        if (position == undefined) {
+            this.add_actor(meter);
+        } else {
+            this.insert_child_at_index(meter, position);
+        }
+    },
+    removeMeter: function(meter) {
+        if (!meter instanceof MeterContainer) {
+            throw new TypeError("First argument of removeMeter() method must be instance of MeterContainer.");
+        }
+        this.remove_actor(meter);
     }
 });
 
@@ -173,6 +191,16 @@ const MeterContainer = new Lang.Class({
     },
     update: function(state) {
         this._label_item.setSummaryText(Math.round(state.percent) + ' %');
+    },
+    destroy: function() {
+        let actors = this.get_children();
+        for (let i = 0; i < actors.length; i++) {
+            let actor = actors[i];
+            this.remove_actor(actor);
+            actor.destroy();
+            actor = null;
+        }
+        this.parent();
     }
 });
 

@@ -13,6 +13,7 @@ const Menu = new Lang.Class({
     Extends: PanelMenu.Button,
     _icons: {},
     _meters: {},
+    _meter_widgets: {},
     _event_handler_ids: [],
 
     _init: function() {
@@ -22,14 +23,14 @@ const Menu = new Lang.Class({
         this._settings = Convenience.getSettings();
         this.available_meters = [PrefsKeys.CPU_METER, PrefsKeys.MEMORY_METER, PrefsKeys.STORAGE_METER, PrefsKeys.NETWORK_METER, PrefsKeys.SWAP_METER, PrefsKeys.LOAD_METER];
 
-        let widget_area_container = FactoryModule.AbstractFactory.create('meter-area-widget');
-        this.menu.box.add_child(widget_area_container);
+        this._widget_area_container = FactoryModule.AbstractFactory.create('meter-area-widget');
+        this.menu.box.add_child(this._widget_area_container);
 
         for (let index in this.available_meters) {
             let type = this.available_meters[index];
             if (this._settings.get_boolean(type)) {
                 this._createIcon(type);
-                this._createMeterWidget(widget_area_container, type);
+                this._createMeterWidget(type);
             }
             this._addSettingChangedHandler(type);
         }
@@ -63,8 +64,10 @@ const Menu = new Lang.Class({
             let is_enabled = settings.get_boolean(key);
             if (is_enabled) {
                 this._createIcon(type);
+                this._createMeterWidget(type);
             } else {
                 this._destroyIcon(type);
+                this._destroyMeterWidget(type);
             }
         }));
         this._event_handler_ids.push(event_id);
@@ -74,10 +77,19 @@ const Menu = new Lang.Class({
             this._settings.disconnect(this._event_handler_ids[index]);
         }
     },
-    _createMeterWidget: function(widget_area_container, type) {
+    _createMeterWidget: function(type) {
         let meter_widget = FactoryModule.AbstractFactory.create('meter-widget', type);
-        widget_area_container.addMeter(meter_widget);
+        this._meter_widgets[type] = meter_widget;
+        this._widget_area_container.addMeter(meter_widget, this.available_meters.indexOf(type));
         this._meters[type].addObserver(meter_widget);
+    },
+    _destroyMeterWidget: function(type) {
+        let meter_widget = this._meter_widgets[type];
+        this._meters[type].removeObserver(meter_widget);
+        this._widget_area_container.removeMeter(meter_widget);
+        delete this._meter_widgets[type];
+        meter_widget.destroy();
+        meter_widget = null;
     },
     destroy: function() {
         let meters = this._meters;
