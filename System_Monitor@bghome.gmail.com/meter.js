@@ -6,6 +6,8 @@ const Util = Me.imports.util;
 
 function MeterSubject() {
 	this.observers = [];
+	this.previous_usage = 0;
+	this.usage = 0;
 
 	this.add = function(object) {
 		this.observers.push(object);
@@ -25,14 +27,15 @@ function MeterSubject() {
 		return -1;
 	};
 
-	this.notify = function(percent, processes, system_load, directories) {
+	this.notify = function(percent, processes, system_load, directories, has_activity) {
 		for (let i = 0; i < this.observers.length; i++) {
 			this.observers[i].update(
 				{
 					percent: percent,
 					processes: processes,
 					system_load: system_load,
-					directories: directories
+					directories: directories,
+					has_activity: has_activity
 				}
 			);
 		}
@@ -49,11 +52,13 @@ MeterSubject.prototype.removeObserver = function(observer) {
 
 MeterSubject.prototype.notifyAll = function() {
 	if (this.observers.length > 0) {
+		this.previous_usage = this.usage;
 		this.notify(
 			this.calculateUsage(),
 			this.getProcesses(),
 			this.getSystemLoad(),
-			this.getDirectories()
+			this.getDirectories(),
+			this.hasActivity()
 		);
 	}
 };
@@ -102,12 +107,18 @@ MeterSubject.prototype.getDirectories = function() {
 	return [];
 };
 
+/**
+ * Tell wheter the resource was utilized since the last status update.
+ */
+MeterSubject.prototype.hasActivity = function() {
+	return this.previous_usage < this.usage;
+};
+
 MeterSubject.prototype.destroy = function() {};
 
 const CpuMeter = function() {
 	this.observers = [];
 	this._statistics = {cpu:{}};
-	this.usage = 0;
 
 	this.loadData = function() {
 		let statistics = {cpu:{}};
@@ -172,7 +183,6 @@ CpuMeter.prototype = new MeterSubject();
 
 const MemoryMeter = function() {
 	this.observers = [];
-	this.usage = 0;
 
 	this.loadData = function() {
 		let statistics = {};
@@ -234,7 +244,8 @@ const StorageMeter = function() {
 	}
 
 	this.calculateUsage = function() {
-		return this.loadData();
+		this.usage = this.loadData();
+		return this.usage;
 	};
 
 	this.getDirectories = function() {
@@ -330,7 +341,8 @@ const NetworkMeter = function() {
 
 		this._statistics = statistics;
 
-		return Math.round(sum_percent / total * 100);
+		this.usage = Math.round(sum_percent / total * 100);
+		return this.usage;
 	};
 
 	this.destroy = function() {
