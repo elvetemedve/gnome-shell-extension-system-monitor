@@ -34,7 +34,7 @@ Icon.prototype.setProgress = function(percent) {
   }
 
 	if (percent <= 0 || color_range.length < 2) {
-		this.style = '';
+		this.style = null;
 		return this;
 	}
 
