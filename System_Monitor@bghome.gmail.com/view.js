@@ -95,6 +95,8 @@ const Menu = new Lang.Class({
         let meters = this._meters;
         for (let type in meters) {
             meters[type].destroy();
+            this._destroyIcon(type);
+            this._destroyMeterWidget(type);
         }
 
         this._removeAllSettingChangedHandlers();
