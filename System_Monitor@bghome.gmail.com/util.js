@@ -22,18 +22,21 @@ let Processes = new Lang.Class({
 
     /**
      * Get ID list of running processes
+     *
+     * @return Promise
      */
     getIds: function() {
         let file = FactoryModule.AbstractFactory.create('file', this, '/proc');
-		let files = file.list();
-		let ids = [];
-		for (let i in files) {
-			let id = parseInt(files[i]);
-			if (!isNaN(id)) {
-				ids.push(id);
-			}
-		}
-		return ids;
+		return file.list().then(files => {
+            let ids = [];
+    		for (let i in files) {
+    			let id = parseInt(files[i]);
+    			if (!isNaN(id)) {
+    				ids.push(id);
+    			}
+    		}
+    		return ids;
+        });
     },
 
     /**

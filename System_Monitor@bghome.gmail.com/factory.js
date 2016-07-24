@@ -1,7 +1,7 @@
 const Me = imports.misc.extensionUtils.getCurrentExtension();
 const IndicatorModule = Me.imports.indicator;
 const MeterModule = Me.imports.meter;
-const FileModule = Me.imports.file;
+const FileModule = Me.imports.helpers.file;
 const Widget = Me.imports.widget;
 const Util = Me.imports.util;
 
@@ -146,7 +146,7 @@ const FileFactory = (function() {
 
 		this.destroy = function(namespace) {
 			for (let filename in openedFiles[namespace]) {
-				delete openedFiles[namespace][filename];
+                delete openedFiles[namespace][filename];
 			}
 		}
 	};
