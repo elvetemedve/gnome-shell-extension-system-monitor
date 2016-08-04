@@ -1,9 +1,11 @@
 const Util = imports.misc.util;
 const GTop = imports.gi.GTop;
 const Lang = imports.lang;
+const Mainloop = imports.mainloop;
 
 const Me = imports.misc.extensionUtils.getCurrentExtension();
 const FactoryModule = Me.imports.factory;
+const Promise = Me.imports.helpers.promise.Promise;
 
 let Process = new Lang.Class({
     Name: "Process",
@@ -23,20 +25,16 @@ let Processes = new Lang.Class({
     /**
      * Get ID list of running processes
      *
+     * Update process list asynchronously and return the result of the last update.
      * @return Promise
      */
     getIds: function() {
-        let file = FactoryModule.AbstractFactory.create('file', this, '/proc');
-		return file.list().then(files => {
-            let ids = [];
-    		for (let i in files) {
-    			let id = parseInt(files[i]);
-    			if (!isNaN(id)) {
-    				ids.push(id);
-    			}
-    		}
-    		return ids;
-        });
+        if (Processes.status === 'idle') {
+            Processes.status = 'pending';
+            Mainloop.idle_add(Lang.bind(this, this._updateProcessIds));
+        }
+
+        return Processes.ids;
     },
 
     /**
@@ -49,21 +47,45 @@ let Processes = new Lang.Class({
      */
     getTopProcesses: function(process_stats, attribute, limit) {
         process_stats.sort(function(a, b) {
-			return (a[attribute] > b[attribute]) ? -1 : (a[attribute] < b[attribute] ? 1 : 0);
-		});
+            return (a[attribute] > b[attribute]) ? -1 : (a[attribute] < b[attribute] ? 1 : 0);
+        });
 
         process_stats = process_stats.slice(0, limit);
 
-		let process_args = new GTop.glibtop_proc_args();
-		let result = [];
-		for (let i = 0; i < process_stats.length; i++) {
-			let pid = process_stats[i].pid;
-			let args = GTop.glibtop_get_proc_args(process_args, pid, 0);
-			result.push({"command": args, "pid": pid});
-		}
+        let process_args = new GTop.glibtop_proc_args();
+        let result = [];
+        for (let i = 0; i < process_stats.length; i++) {
+            let pid = process_stats[i].pid;
+            let args = GTop.glibtop_get_proc_args(process_args, pid, 0);
+            result.push({"command": args, "pid": pid});
+        }
         return result;
+    },
+
+    _updateProcessIds: function() {
+        let file = FactoryModule.AbstractFactory.create('file', this, '/proc');
+        Processes.ids = file.list().then(files => {
+            let ids = [];
+            for (let i in files) {
+                let id = parseInt(files[i]);
+                if (!isNaN(id)) {
+                    ids.push(id);
+                }
+            }
+            Processes.status = 'idle';
+            return ids;
+        }, () => {
+            Processes.status = 'idle';
+        });
+
+        return false;
     }
 });
+
+Processes.ids = new Promise(resolve => {
+    resolve([]);
+});
+Processes.status = 'idle';
 
 let Directories = new Lang.Class({
     Name: "Directories",
@@ -78,8 +100,8 @@ let Directories = new Lang.Class({
      */
     getTopDirectories: function(directory_stats, attribute, limit) {
         directory_stats.sort(function(a, b) {
-			return (a[attribute] < b[attribute]) ? 1 : (a[attribute] > b[attribute] ? -1 : 0);
-		});
+            return (a[attribute] < b[attribute]) ? 1 : (a[attribute] > b[attribute] ? -1 : 0);
+        });
 
         directory_stats = directory_stats.splice(0, limit);
 
@@ -102,5 +124,48 @@ let Directories = new Lang.Class({
         let sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB', 'PB', 'EB', 'ZB', 'YB'];
         let i = Math.floor(Math.log(bytes) / Math.log(kilo));
         return parseFloat((bytes / Math.pow(kilo, i)).toFixed(expected_decimals)) + ' ' + sizes[i];
+    }
+});
+
+let Swap = new Lang.Class({
+    Name: "Swap",
+
+    _init: function(id) {
+        this._statistics = {};
+        this._processes = new Processes;
+    },
+
+    /**
+     * Get swap usage information per process
+     *
+     * Update data asynchronously and return the result of the last update.
+     * @return Promise Keys are process IDs, values are objects like {number_of_pages_swapped: 1234}
+     */
+    getStatisticsPerProcess: function() {
+        return this._processes.getIds().then(process_ids => {
+            // Remove data of non existent processes.
+            for (let pid in this._statistics) {
+                if (!process_ids[pid]) {
+                    delete this._statistics[pid];
+                }
+            }
+
+            // Update data of processes.
+            for (let i = 0; i < process_ids.length; i++) {
+                Mainloop.idle_add(Lang.bind(this, this._getRawStastisticsForProcess), process_ids[i]);
+            }
+            return this._statistics;
+        });
+    },
+
+    _getRawStastisticsForProcess: function(pid) {
+        let promise = FactoryModule.AbstractFactory.create('file', this, '/proc/' + pid + '/stat').read().then(contents => {
+            let number_of_pages_swapped = parseInt(contents.split(' ')[35]);
+            this._statistics[pid] = {
+                number_of_pages_swapped: number_of_pages_swapped
+            };
+        });
+
+        return false;
     }
 });

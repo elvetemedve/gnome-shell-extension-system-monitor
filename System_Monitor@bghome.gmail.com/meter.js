@@ -133,6 +133,8 @@ MeterSubject.prototype.destroy = function() {};
 const CpuMeter = function() {
 	this.observers = [];
 	this._statistics = {cpu:{}};
+	let processes = new Util.Processes;
+	let process_time = new GTop.glibtop_proc_time();
 
 	this.loadData = function() {
 		return FactoryModule.AbstractFactory.create('file', this, '/proc/stat').read().then(contents => {
@@ -176,9 +178,7 @@ const CpuMeter = function() {
 	};
 
 	this.getProcesses = function() {
-		let processes = new Util.Processes;
 		return processes.getIds().then(process_ids => {
-			let process_time = new GTop.glibtop_proc_time();
 			let process_stats = [];
 			for (let i = 0; i < process_ids.length; i++) {
 				GTop.glibtop_get_proc_time(process_time, process_ids[i]);
@@ -199,6 +199,8 @@ CpuMeter.prototype = new MeterSubject();
 
 const MemoryMeter = function() {
 	this.observers = [];
+	let processes = new Util.Processes;
+	let process_memory = new GTop.glibtop_proc_mem();
 
 	this.loadData = function() {
 		return FactoryModule.AbstractFactory.create('file', this, '/proc/meminfo').read().then(contents => {
@@ -221,9 +223,7 @@ const MemoryMeter = function() {
 	};
 
 	this.getProcesses = function() {
-		let processes = new Util.Processes;
 		return processes.getIds().then(process_ids => {
-			let process_memory = new GTop.glibtop_proc_mem();
 			let process_stats = [];
 			for (let i = 0; i < process_ids.length; i++) {
 				GTop.glibtop_get_proc_mem(process_memory, process_ids[i]);
@@ -255,9 +255,10 @@ const StorageMeter = function() {
 	 	'hfs', 'jfs', 'nilfs2', 'ntfs', 'reiser4', 'reiserfs', 'vfat', 'xfs',
 		'zfs'
 	];
+	let usage = new GTop.glibtop_fsusage();
+	let directories = new Util.Directories;
 
 	this.loadData = function() {
-		let usage = new GTop.glibtop_fsusage();
 		GTop.glibtop_get_fsusage(usage, '/');
 		return (usage.blocks - usage.bavail) / usage.blocks * 100;
 	}
@@ -271,9 +272,6 @@ const StorageMeter = function() {
 
 	this.getDirectories = function() {
 		return FactoryModule.AbstractFactory.create('file', this, '/proc/mounts').read().then(contents => {
-			let directories = new Util.Directories;
-			let usage = new GTop.glibtop_fsusage();
-
 			let mount_list = contents.split("\n");
 			mount_list.splice(-2);	// remove the last two empty lines
 			let directory_stats = [];
@@ -394,6 +392,8 @@ NetworkMeter.prototype = new MeterSubject();
 
 const SwapMeter = function() {
 	this.observers = [];
+	let swap_utility = new Util.Swap;
+	let processes = new Util.Processes;
 
 	this.loadData = function() {
 		return FactoryModule.AbstractFactory.create('file', this, '/proc/meminfo').read().then(contents => {
@@ -416,28 +416,20 @@ const SwapMeter = function() {
 	};
 
 	this.getProcesses = function() {
-		let processes = new Util.Processes;
-		return processes.getIds().then(process_ids => {
+		return swap_utility.getStatisticsPerProcess().then(raw_statistics => {
 			let process_stats = [];
-			let promises = [];
-			for (let i = 0; i < process_ids.length; i++) {
-				let promise = FactoryModule.AbstractFactory.create('file', this, '/proc/' + process_ids[i] + '/stat').read().then(contents => {
-					let number_of_pages_swapped = parseInt(contents.split(' ')[35]);
-					if (number_of_pages_swapped > 0) {
-						process_stats.push (
-							{
-								"pid": process_ids[i],
-								"memory": number_of_pages_swapped
-							}
-						);
-					}
-				});
-				promises.push(promise);
+			for (let pid in raw_statistics) {
+				if (raw_statistics[pid].number_of_pages_swapped > 0) {
+					process_stats.push(
+						{
+							"pid": pid,
+							"memory": raw_statistics[pid].number_of_pages_swapped
+						}
+					);
+				}
 			}
 
-			return Promise.all(promises).then(() => {
-				return processes.getTopProcesses(process_stats, "memory", 3);
-			});
+			return processes.getTopProcesses(process_stats, "memory", 3);
 		});
 	};
 
@@ -452,6 +444,7 @@ SwapMeter.prototype = new MeterSubject();
 const SystemLoadMeter = function() {
 	this.observers = [];
 	this._number_of_cpu_cores = null;
+	let load = new GTop.glibtop_loadavg();
 
 	this._getNumberOfCPUCores = function() {
 		return new Promise(resolve => {
@@ -493,7 +486,6 @@ const SystemLoadMeter = function() {
 
 	this.getSystemLoad = function() {
 		return new Promise(resolve => {
-			let load = new GTop.glibtop_loadavg();
 			GTop.glibtop_get_loadavg(load);
 			resolve({
 				'running_tasks_count': load.nr_running,
