@@ -5,5 +5,5 @@
 	"description": "Display resource usage",
     "settings-schema": "org.gnome.shell.extensions.system-monitor",
 	"url": "https://github.com/elvetemedve/gnome-shell-extension-system-monitor",
-	"version": "1.0.1"
+	"version": "1.0.2"
 }
