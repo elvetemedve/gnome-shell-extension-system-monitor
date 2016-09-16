@@ -5,3 +5,4 @@ const STORAGE_METER = 'storage-meter';
 const NETWORK_METER = 'network-meter';
 const SWAP_METER = 'swap-meter';
 const LOAD_METER = 'load-meter';
+const POSITION = 'position';

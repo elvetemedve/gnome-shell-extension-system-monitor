@@ -220,6 +220,11 @@ const SystemMonitorPrefsWidget = new GObject.Class({
             upper: 10,
             step_increment: 1
         });
+        general_page.add_combo('Position on top bar.', PrefsKeys.POSITION, [
+          { "title": "Left side", "value": "left" },
+          { "title": "Center", "value": "center" },
+          { "title": "Right side", "value": "right" }
+        ], 'string');
         general_page.add_boolean('Enable CPU indicator.', PrefsKeys.CPU_METER);
         general_page.add_boolean('Enable memory indicator.', PrefsKeys.MEMORY_METER);
         general_page.add_boolean('Enable disk indicator.', PrefsKeys.STORAGE_METER);
