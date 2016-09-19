@@ -1,7 +1,8 @@
 require 'rake'
+require 'json'
 
 PACKAGE_NAME = 'System_Monitor@bghome.gmail.com'
-VERSION = '0.1.0'
+VERSION = JSON.parse(File.read("#{PACKAGE_NAME}/metadata.json"))['version']
 BUILD_DIRECTORY = File.join(File.dirname(__FILE__), "build")
 USER_INSTALL_DIRECTORY = File.expand_path('~/.local/share/gnome-shell/extensions')
 SYSTEM_INSTALL_DIRECTORY = '/usr/local/share/gnome-shell/extensions'
