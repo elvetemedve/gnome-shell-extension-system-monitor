@@ -36,5 +36,10 @@
         <summary>Enable system load indicator.</summary>
         <description>Turn on or off the system load indicator.</description>
     </key>
+    <key type="s" name="position">
+        <default>"center"</default>
+        <summary>Position on top bar.</summary>
+        <description>Controls the vertical alignment of the indicator widget on the top bar.</description>
+    </key>
   </schema>
 </schemalist>
