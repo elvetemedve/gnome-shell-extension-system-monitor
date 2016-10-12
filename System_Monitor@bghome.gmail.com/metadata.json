@@ -5,5 +5,5 @@
 	"description": "Display resource usage.\n\nLinux distribution specific installation instructions can be found in the wiki at https://github.com/elvetemedve/gnome-shell-extension-system-monitor/wiki/Installation.\n\nPlease report bugs here: https://github.com/elvetemedve/gnome-shell-extension-system-monitor/issues",
     "settings-schema": "org.gnome.shell.extensions.system-monitor",
 	"url": "https://github.com/elvetemedve/gnome-shell-extension-system-monitor",
-	"version": "1.1.0"
+	"version": "1.1.1"
 }
