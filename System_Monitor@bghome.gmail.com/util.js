@@ -1,7 +1,7 @@
 const Util = imports.misc.util;
 const GTop = imports.gi.GTop;
 const Lang = imports.lang;
-const Mainloop = imports.mainloop;
+const GLib = imports.gi.GLib;
 
 const Me = imports.misc.extensionUtils.getCurrentExtension();
 const FactoryModule = Me.imports.factory;
@@ -31,7 +31,7 @@ let Processes = new Lang.Class({
     getIds: function() {
         if (Processes.status === 'idle') {
             Processes.status = 'pending';
-            Mainloop.idle_add(Lang.bind(this, this._updateProcessIds));
+            GLib.idle_add(GLib.PRIORITY_LOW, Lang.bind(this, this._updateProcessIds));
         }
 
         return Processes.ids;
@@ -63,22 +63,19 @@ let Processes = new Lang.Class({
     },
 
     _updateProcessIds: function() {
-        let file = FactoryModule.AbstractFactory.create('file', this, '/proc');
-        Processes.ids = file.list().then(files => {
+        Processes.ids = new Promise(resolve => {
+            let proclist = new GTop.glibtop_proclist;
+            let pid_list = GTop.glibtop_get_proclist(proclist, GTop.GLIBTOP_EXCLUDE_SYSTEM, 0);
             let ids = [];
-            for (let i in files) {
-                let id = parseInt(files[i]);
-                if (!isNaN(id)) {
-                    ids.push(id);
-                }
+            for (let pid of pid_list) {
+              ids.push(pid);
             }
+
             Processes.status = 'idle';
-            return ids;
-        }, () => {
-            Processes.status = 'idle';
+            resolve(ids);
         });
 
-        return false;
+        return GLib.SOURCE_REMOVE;
     }
 });
 
@@ -152,7 +149,7 @@ let Swap = new Lang.Class({
 
             // Update data of processes.
             for (let i = 0; i < process_ids.length; i++) {
-                Mainloop.idle_add(Lang.bind(this, this._getRawStastisticsForProcess), process_ids[i]);
+              GLib.idle_add(GLib.PRIORITY_LOW, Lang.bind(this, this._getRawStastisticsForProcess, process_ids[i]));
             }
             return this._statistics;
         });
@@ -166,7 +163,7 @@ let Swap = new Lang.Class({
             };
         });
 
-        return false;
+        return GLib.SOURCE_REMOVE;
     }
 });
 
