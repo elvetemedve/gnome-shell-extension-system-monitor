@@ -419,11 +419,11 @@ const SwapMeter = function() {
 		return swap_utility.getStatisticsPerProcess().then(raw_statistics => {
 			let process_stats = [];
 			for (let pid in raw_statistics) {
-				if (raw_statistics[pid].number_of_pages_swapped > 0) {
+				if (raw_statistics[pid].vm_swap > 0) {
 					process_stats.push(
 						{
 							"pid": pid,
-							"memory": raw_statistics[pid].number_of_pages_swapped
+							"memory": raw_statistics[pid].vm_swap
 						}
 					);
 				}

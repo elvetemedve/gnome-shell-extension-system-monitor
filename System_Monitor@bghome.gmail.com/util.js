@@ -136,13 +136,13 @@ let Swap = new Lang.Class({
      * Get swap usage information per process
      *
      * Update data asynchronously and return the result of the last update.
-     * @return Promise Keys are process IDs, values are objects like {number_of_pages_swapped: 1234}
+     * @return Promise Keys are process IDs, values are objects like {vm_swap: 1234}
      */
     getStatisticsPerProcess: function() {
         return this._processes.getIds().then(process_ids => {
             // Remove data of non existent processes.
             for (let pid in this._statistics) {
-                if (!process_ids[pid]) {
+                if (-1 != process_ids.indexOf(pid)) {
                     delete this._statistics[pid];
                 }
             }
@@ -156,10 +156,11 @@ let Swap = new Lang.Class({
     },
 
     _getRawStastisticsForProcess: function(pid) {
-        let promise = FactoryModule.AbstractFactory.create('file', this, '/proc/' + pid + '/stat').read().then(contents => {
-            let number_of_pages_swapped = parseInt(contents.split(' ')[35]);
+        var pattern = new RegExp('^VmSwap:\\s*(\\d+)', 'm');
+        let promise = FactoryModule.AbstractFactory.create('file', this, '/proc/' + pid + '/status').read().then(contents => {
+            let vm_swap = parseInt(contents.match(pattern)[1]);
             this._statistics[pid] = {
-                number_of_pages_swapped: number_of_pages_swapped
+                vm_swap: vm_swap
             };
         });
 
