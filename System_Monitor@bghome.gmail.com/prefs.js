@@ -232,10 +232,20 @@ const SystemMonitorPrefsWidget = new GObject.Class({
         general_page.add_boolean('Enable swap indicator.', PrefsKeys.SWAP_METER);
         general_page.add_boolean('Enable system load indicator.', PrefsKeys.LOAD_METER);
 
+        let memory_page = new PagePrefsGrid();
+        memory_page.add_combo('Memory calculation method for process list sorting.', PrefsKeys.MEMORY_CALCULATION_METHOD, [
+          { "title": "RAM only", "value": "ram_only" },
+          { "title": "All memory", "value": "all" }
+        ], 'string');
+
         let pages = [
             {
                 name: 'General',
                 page: general_page
+            },
+            {
+                name: 'Memory',
+                page: memory_page
             }
         ];
 

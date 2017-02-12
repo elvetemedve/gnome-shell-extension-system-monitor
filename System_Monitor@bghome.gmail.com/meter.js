@@ -197,8 +197,12 @@ const CpuMeter = function() {
 CpuMeter.prototype = new MeterSubject();
 
 
-const MemoryMeter = function() {
+const MemoryMeter = function(calculation_method) {
 	this.observers = [];
+	if (-1 == ['ram_only', 'all'].indexOf(calculation_method)) {
+			throw new RangeError('Unknown memory calculation method given: ' + calculation_method);
+	}
+	this._calculation_method = calculation_method;
 	let processes = new Util.Processes;
 	let process_memory = new GTop.glibtop_proc_mem();
 
@@ -223,6 +227,8 @@ const MemoryMeter = function() {
 	};
 
 	this.getProcesses = function() {
+		let calculation_method = this._calculation_method == 'ram_only' ? calculateRamOnly : calculateAllRam;
+
 		return processes.getIds().then(process_ids => {
 			let process_stats = [];
 			for (let i = 0; i < process_ids.length; i++) {
@@ -230,7 +236,7 @@ const MemoryMeter = function() {
 				process_stats.push (
 					{
 						"pid": process_ids[i],
-						"memory": process_memory.vsize + process_memory.resident + process_memory.share
+						"memory": calculation_method(process_memory)
 					}
 				);
 			}
@@ -241,6 +247,14 @@ const MemoryMeter = function() {
 
 	this.destroy = function() {
 		FactoryModule.AbstractFactory.destroy('file', this);
+	};
+
+	let calculateRamOnly = function(process_memory) {
+		return process_memory.resident;
+	};
+
+	let calculateAllRam = function(process_memory) {
+		return process_memory.vsize + process_memory.resident + process_memory.share;
 	};
 };
 

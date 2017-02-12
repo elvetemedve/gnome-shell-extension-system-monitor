@@ -41,5 +41,10 @@
         <summary>Position on top bar.</summary>
         <description>Controls the vertical alignment of the indicator widget on the top bar.</description>
     </key>
+    <key type="s" name="memory-calculation-method">
+        <default>"ram_only"</default>
+        <summary>Memory calculation method for process list sorting.</summary>
+        <description>Controls which type of memory needs to be included when computing memory usage for a process.</description>
+    </key>
   </schema>
 </schemalist>

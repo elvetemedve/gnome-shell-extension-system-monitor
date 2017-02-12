@@ -6,3 +6,4 @@ const NETWORK_METER = 'network-meter';
 const SWAP_METER = 'swap-meter';
 const LOAD_METER = 'load-meter';
 const POSITION = 'position';
+const MEMORY_CALCULATION_METHOD = 'memory-calculation-method';
