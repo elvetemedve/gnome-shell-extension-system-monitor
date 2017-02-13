@@ -1,7 +1,7 @@
 const Util = imports.misc.util;
 const GTop = imports.gi.GTop;
 const Lang = imports.lang;
-const Mainloop = imports.mainloop;
+const GLib = imports.gi.GLib;
 
 const Me = imports.misc.extensionUtils.getCurrentExtension();
 const FactoryModule = Me.imports.factory;
@@ -31,7 +31,7 @@ let Processes = new Lang.Class({
     getIds: function() {
         if (Processes.status === 'idle') {
             Processes.status = 'pending';
-            Mainloop.idle_add(Lang.bind(this, this._updateProcessIds));
+            GLib.idle_add(GLib.PRIORITY_LOW, Lang.bind(this, this._updateProcessIds));
         }
 
         return Processes.ids;
@@ -63,22 +63,19 @@ let Processes = new Lang.Class({
     },
 
     _updateProcessIds: function() {
-        let file = FactoryModule.AbstractFactory.create('file', this, '/proc');
-        Processes.ids = file.list().then(files => {
+        Processes.ids = new Promise(resolve => {
+            let proclist = new GTop.glibtop_proclist;
+            let pid_list = GTop.glibtop_get_proclist(proclist, GTop.GLIBTOP_EXCLUDE_SYSTEM, 0);
             let ids = [];
-            for (let i in files) {
-                let id = parseInt(files[i]);
-                if (!isNaN(id)) {
-                    ids.push(id);
-                }
+            for (let pid of pid_list) {
+              ids.push(pid);
             }
+
             Processes.status = 'idle';
-            return ids;
-        }, () => {
-            Processes.status = 'idle';
+            resolve(ids);
         });
 
-        return false;
+        return GLib.SOURCE_REMOVE;
     }
 });
 
@@ -139,33 +136,73 @@ let Swap = new Lang.Class({
      * Get swap usage information per process
      *
      * Update data asynchronously and return the result of the last update.
-     * @return Promise Keys are process IDs, values are objects like {number_of_pages_swapped: 1234}
+     * @return Promise Keys are process IDs, values are objects like {vm_swap: 1234}
      */
     getStatisticsPerProcess: function() {
         return this._processes.getIds().then(process_ids => {
             // Remove data of non existent processes.
             for (let pid in this._statistics) {
-                if (!process_ids[pid]) {
+                if (-1 != process_ids.indexOf(pid)) {
                     delete this._statistics[pid];
                 }
             }
 
             // Update data of processes.
             for (let i = 0; i < process_ids.length; i++) {
-                Mainloop.idle_add(Lang.bind(this, this._getRawStastisticsForProcess), process_ids[i]);
+              GLib.idle_add(GLib.PRIORITY_LOW, Lang.bind(this, this._getRawStastisticsForProcess, process_ids[i]));
             }
             return this._statistics;
         });
     },
 
     _getRawStastisticsForProcess: function(pid) {
-        let promise = FactoryModule.AbstractFactory.create('file', this, '/proc/' + pid + '/stat').read().then(contents => {
-            let number_of_pages_swapped = parseInt(contents.split(' ')[35]);
+        var pattern = new RegExp('^VmSwap:\\s*(\\d+)', 'm');
+        let promise = FactoryModule.AbstractFactory.create('file', this, '/proc/' + pid + '/status').read().then(contents => {
+            let vm_swap = parseInt(contents.match(pattern)[1]);
             this._statistics[pid] = {
-                number_of_pages_swapped: number_of_pages_swapped
+                vm_swap: vm_swap
             };
         });
 
-        return false;
+        return GLib.SOURCE_REMOVE;
     }
 });
+
+let StopWatch = function () {
+    this.startTime = 0;
+    this.stopTime = 0;
+    this.running = false;
+    this.performance = !!window.performance;
+};
+
+StopWatch.prototype.currentTime = function () {
+    return this.performance ? window.performance.now() : new Date().getTime();
+};
+
+StopWatch.prototype.start = function () {
+    this.startTime = this.currentTime();
+    this.running = true;
+};
+
+StopWatch.prototype.stop = function () {
+    this.stopTime = this.currentTime();
+    this.running = false;
+};
+
+StopWatch.prototype.getElapsedMilliseconds = function () {
+    if (this.running) {
+        this.stopTime = this.currentTime();
+    }
+
+    return this.stopTime - this.startTime;
+};
+
+StopWatch.prototype.getElapsedSeconds = function () {
+    return this.getElapsedMilliseconds() / 1000;
+};
+
+StopWatch.prototype.printElapsed = function (name) {
+    var currentName = name || 'Elapsed: ';
+
+    window.log(currentName + '[' + this.getElapsedMilliseconds() + 'ms]' + '[' + this.getElapsedSeconds() + 's]');
+};
