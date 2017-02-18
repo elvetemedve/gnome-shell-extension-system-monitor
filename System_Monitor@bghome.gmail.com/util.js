@@ -50,14 +50,15 @@ let Processes = new Lang.Class({
             return (a[attribute] > b[attribute]) ? -1 : (a[attribute] < b[attribute] ? 1 : 0);
         });
 
-        process_stats = process_stats.slice(0, limit);
-
         let process_args = new GTop.glibtop_proc_args();
         let result = [];
         for (let i = 0; i < process_stats.length; i++) {
             let pid = process_stats[i].pid;
             let args = GTop.glibtop_get_proc_args(process_args, pid, 0);
-            result.push({"command": args, "pid": pid});
+            if (args.length > 0) {
+                result.push({"command": args, "pid": pid});
+                if (result.length == limit) break;
+            }
         }
         return result;
     },
@@ -65,10 +66,12 @@ let Processes = new Lang.Class({
     _updateProcessIds: function() {
         Processes.ids = new Promise(resolve => {
             let proclist = new GTop.glibtop_proclist;
-            let pid_list = GTop.glibtop_get_proclist(proclist, GTop.GLIBTOP_EXCLUDE_SYSTEM, 0);
+            let pid_list = GTop.glibtop_get_proclist(proclist, 0, 0);
             let ids = [];
             for (let pid of pid_list) {
-              ids.push(pid);
+              if (pid > 0) {
+                ids.push(pid);
+              }
             }
 
             Processes.status = 'idle';
