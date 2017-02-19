@@ -132,17 +132,17 @@ MeterSubject.prototype.destroy = function() {};
 
 const CpuMeter = function() {
 	this.observers = [];
-	this._statistics = {cpu:{}};
+	this._statistics = {cpu:{}, proc:{}};
 	let processes = new Util.Processes;
 	let process_time = new GTop.glibtop_proc_time();
 
 	this.loadData = function() {
 		return FactoryModule.AbstractFactory.create('file', this, '/proc/stat').read().then(contents => {
-			let statistics = {cpu:{}};
+			let statistics = {};
 			let reverse_data = contents.match(/^cpu.+/)[0].match(/\d+/g).reverse();
 			let columns = ['user','nice','system','idle','iowait','irq','softirq','steal','guest','guest_nice'];
 			for (let index in columns) {
-				statistics.cpu[columns[index]] = parseInt(reverse_data.pop());
+				statistics[columns[index]] = parseInt(reverse_data.pop());
 			}
 			return statistics;
 		});
@@ -150,7 +150,6 @@ const CpuMeter = function() {
 
 	this.calculateUsage = function() {
 		return this.loadData().then(stat => {
-			let periods = {cpu:{}};
 			let time_calculator = function(stat) {
 				let result = {};
 				result.user = stat.user - stat.guest || 0;
@@ -167,22 +166,26 @@ const CpuMeter = function() {
 				return (periods.user + periods.nice + periods.systemall + periods.steal + periods.guest) / periods.total * 100;
 			};
 
-			let times = time_calculator(stat.cpu), previous_times = time_calculator(this._statistics.cpu);
-			this._statistics = stat;
+			let times = time_calculator(stat), previous_times = time_calculator(this._statistics.cpu);
+			this._statistics.cpu = stat;
+			let periods = {};
 			for (let index in times) {
-				periods.cpu[index] = times[index] - previous_times[index];
+				periods[index] = times[index] - previous_times[index];
 			}
 
-			return usage_calculator(periods.cpu);
+			return usage_calculator(periods);
 		});
 	};
 
 	this.getProcesses = function() {
 		return processes.getIds().then(process_ids => {
 			let process_stats = [];
+
 			for (let i = 0; i < process_ids.length; i++) {
 				GTop.glibtop_get_proc_time(process_time, process_ids[i]);
-				process_stats.push ({"pid": process_ids[i], "time": process_time.rtime});
+				let previous_rtime = this._statistics.proc[process_ids[i]] || process_time.rtime;
+				this._statistics.proc[process_ids[i]] = process_time.rtime;
+				process_stats.push ({"pid": process_ids[i], "time": process_time.rtime - previous_rtime});
 			}
 
 			return processes.getTopProcesses(process_stats, "time", 3);
