@@ -1,7 +1,7 @@
 const Util = imports.misc.util;
 const GTop = imports.gi.GTop;
-const Lang = imports.lang;
 const GLib = imports.gi.GLib;
+const Lang = imports.lang;
 
 const Me = imports.misc.extensionUtils.getCurrentExtension();
 const FactoryModule = Me.imports.factory;
@@ -29,12 +29,24 @@ let Processes = new Lang.Class({
      * @return Promise
      */
     getIds: function() {
-        if (Processes.status === 'idle') {
-            Processes.status = 'pending';
-            GLib.idle_add(GLib.PRIORITY_LOW, Lang.bind(this, this._updateProcessIds));
-        }
-
-        return Processes.ids;
+        return new Promise((resolve, reject) => {
+            GLib.idle_add(GLib.PRIORITY_LOW, Lang.bind(this, function() {
+                try {
+                    let proclist = new GTop.glibtop_proclist;
+                    let pid_list = GTop.glibtop_get_proclist(proclist, 0, 0);
+                    let ids = [];
+                    for (let pid of pid_list) {
+                        if (pid > 0) {
+                            ids.push(pid);
+                        }
+                    }
+                    resolve(ids);
+                } catch(e) {
+                    reject(e);
+                }
+                return GLib.SOURCE_REMOVE;
+            }));
+        });
     },
 
     /**
@@ -61,31 +73,8 @@ let Processes = new Lang.Class({
             }
         }
         return result;
-    },
-
-    _updateProcessIds: function() {
-        Processes.ids = new Promise(resolve => {
-            let proclist = new GTop.glibtop_proclist;
-            let pid_list = GTop.glibtop_get_proclist(proclist, 0, 0);
-            let ids = [];
-            for (let pid of pid_list) {
-              if (pid > 0) {
-                ids.push(pid);
-              }
-            }
-
-            Processes.status = 'idle';
-            resolve(ids);
-        });
-
-        return GLib.SOURCE_REMOVE;
     }
 });
-
-Processes.ids = new Promise(resolve => {
-    resolve([]);
-});
-Processes.status = 'idle';
 
 let Directories = new Lang.Class({
     Name: "Directories",
@@ -131,43 +120,55 @@ let Swap = new Lang.Class({
     Name: "Swap",
 
     _init: function(id) {
-        this._statistics = {};
         this._processes = new Processes;
+        this._pattern = new RegExp('^VmSwap:\\s*(\\d+)', 'm');
     },
 
     /**
      * Get swap usage information per process
      *
-     * Update data asynchronously and return the result of the last update.
+     * Update data asynchronously.
      * @return Promise Keys are process IDs, values are objects like {vm_swap: 1234}
      */
     getStatisticsPerProcess: function() {
         return this._processes.getIds().then(process_ids => {
-            // Remove data of non existent processes.
-            for (let pid in this._statistics) {
-                if (-1 != process_ids.indexOf(pid)) {
-                    delete this._statistics[pid];
-                }
-            }
+            return new Promise((resolve, reject) => {
+                GLib.idle_add(GLib.PRIORITY_LOW, Lang.bind(this, function(process_ids) {
+					try {
+                        let promises = [];
+                        for (let i = 0; i < process_ids.length; i++) {
+                            let pid = process_ids[i];
+                            promises.push(this._getRawStastisticsForProcess(pid));
+                        }
 
-            // Update data of processes.
-            for (let i = 0; i < process_ids.length; i++) {
-              GLib.idle_add(GLib.PRIORITY_LOW, Lang.bind(this, this._getRawStastisticsForProcess, process_ids[i]));
-            }
-            return this._statistics;
+                        Promise.all(promises).then(rawStatistics => {
+                            let statistics = {};
+                            for (let i = 0; i < rawStatistics.length; i++) {
+                                let pid = process_ids[i];
+                                statistics[pid] = rawStatistics[i];
+                            }
+                            resolve(statistics);
+                        });
+                    } catch (e) {
+                        reject(e);
+                    }
+                    return GLib.SOURCE_REMOVE;
+                }, process_ids));
+            });
         });
     },
 
     _getRawStastisticsForProcess: function(pid) {
-        var pattern = new RegExp('^VmSwap:\\s*(\\d+)', 'm');
-        let promise = FactoryModule.AbstractFactory.create('file', this, '/proc/' + pid + '/status').read().then(contents => {
-            let vm_swap = parseInt(contents.match(pattern)[1]);
-            this._statistics[pid] = {
-                vm_swap: vm_swap
-            };
+        let pattern = this._pattern;
+        return FactoryModule.AbstractFactory.create('file', this, '/proc/' + pid + '/status').read().then(contents => {
+            try {
+                return { vm_swap: parseInt(contents.match(pattern)[1]) };
+            } catch (e) {
+                return { vm_swap: 0 };
+            }
+        }, () => {
+            return { vm_swap: 0 };
         });
-
-        return GLib.SOURCE_REMOVE;
     }
 });
 

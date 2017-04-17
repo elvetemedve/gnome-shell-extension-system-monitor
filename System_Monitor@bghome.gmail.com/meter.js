@@ -1,4 +1,6 @@
 const GTop = imports.gi.GTop;
+const GLib = imports.gi.GLib;
+const Lang = imports.lang;
 
 const Me = imports.misc.extensionUtils.getCurrentExtension();
 const FactoryModule = Me.imports.factory;
@@ -132,7 +134,10 @@ MeterSubject.prototype.destroy = function() {};
 
 const CpuMeter = function() {
 	this.observers = [];
-	this._statistics = {cpu:{}, proc:{}};
+	this._statistics = {
+		cpu: { user:0, nice:0, guest:0, guest_nice:0, system:0, irq: 0, softirq: 0, idle: 0, iowait: 0, steal: 0 },
+		proc: {}
+	};
 	let processes = new Util.Processes;
 	let process_time = new GTop.glibtop_proc_time();
 
@@ -152,14 +157,14 @@ const CpuMeter = function() {
 		return this.loadData().then(stat => {
 			let time_calculator = function(stat) {
 				let result = {};
-				result.user = stat.user - stat.guest || 0;
-				result.nice = stat.nice - stat.guest_nice || 0;
-				result.virtall = stat.guest + stat.guest_nice || 0;
-				result.systemall = stat.system + stat.irq + stat.softirq || 0;
-				result.idleall = stat.idle + stat.iowait || 0;
-				result.guest = stat.guest || 0;
-				result.steal = stat.steal || 0;
-				result.total = result.user + result.nice + result.systemall + result.idleall + stat.steal + result.virtall || 0;
+				result.user = stat.user - stat.guest;
+				result.nice = stat.nice - stat.guest_nice;
+				result.virtall = stat.guest + stat.guest_nice;
+				result.systemall = stat.system + stat.irq + stat.softirq;
+				result.idleall = stat.idle + stat.iowait;
+				result.guest = stat.guest;
+				result.steal = stat.steal;
+				result.total = result.user + result.nice + result.systemall + result.idleall + stat.steal + result.virtall;
 				return result;
 			};
 			let usage_calculator = function(periods) {
@@ -179,16 +184,23 @@ const CpuMeter = function() {
 
 	this.getProcesses = function() {
 		return processes.getIds().then(process_ids => {
-			let process_stats = [];
-
-			for (let i = 0; i < process_ids.length; i++) {
-				GTop.glibtop_get_proc_time(process_time, process_ids[i]);
-				let previous_rtime = this._statistics.proc[process_ids[i]] || process_time.rtime;
-				this._statistics.proc[process_ids[i]] = process_time.rtime;
-				process_stats.push ({"pid": process_ids[i], "time": process_time.rtime - previous_rtime});
-			}
-
-			return processes.getTopProcesses(process_stats, "time", 3);
+			return new Promise((resolve, reject) => {
+				GLib.idle_add(GLib.PRIORITY_LOW, Lang.bind(this, function(process_ids) {
+					try {
+						let process_stats = [];
+						for (let i = 0; i < process_ids.length; i++) {
+							GTop.glibtop_get_proc_time(process_time, process_ids[i]);
+							let previous_rtime = this._statistics.proc[process_ids[i]] || process_time.rtime;
+							this._statistics.proc[process_ids[i]] = process_time.rtime;
+							process_stats.push ({"pid": process_ids[i], "time": process_time.rtime - previous_rtime});
+						}
+						resolve(processes.getTopProcesses(process_stats, "time", 3));
+					} catch (e) {
+						reject(e);
+					}
+                	return GLib.SOURCE_REMOVE;
+            	}, process_ids));
+			});
 		});
 	};
 
@@ -233,18 +245,26 @@ const MemoryMeter = function(calculation_method) {
 		let calculation_method = this._calculation_method == 'ram_only' ? calculateRamOnly : calculateAllRam;
 
 		return processes.getIds().then(process_ids => {
-			let process_stats = [];
-			for (let i = 0; i < process_ids.length; i++) {
-				GTop.glibtop_get_proc_mem(process_memory, process_ids[i]);
-				process_stats.push (
-					{
-						"pid": process_ids[i],
-						"memory": calculation_method(process_memory)
+			return new Promise((resolve, reject) => {
+				GLib.idle_add(GLib.PRIORITY_LOW, Lang.bind(this, function(process_ids) {
+					try {
+						let process_stats = [];
+						for (let i = 0; i < process_ids.length; i++) {
+							GTop.glibtop_get_proc_mem(process_memory, process_ids[i]);
+							process_stats.push (
+								{
+									"pid": process_ids[i],
+									"memory": calculation_method(process_memory)
+								}
+							);
+						}
+						resolve(processes.getTopProcesses(process_stats, "memory", 3));
+					} catch (e) {
+						reject(e);
 					}
-				);
-			}
-
-			return processes.getTopProcesses(process_stats, "memory", 3);
+					return GLib.SOURCE_REMOVE;
+				}, process_ids));
+			});
 		});
 	};
 
@@ -289,24 +309,31 @@ const StorageMeter = function() {
 
 	this.getDirectories = function() {
 		return FactoryModule.AbstractFactory.create('file', this, '/proc/mounts').read().then(contents => {
-			let mount_list = contents.split("\n");
-			mount_list.splice(-2);	// remove the last two empty lines
-			let directory_stats = [];
-			for (let i = 0; i < mount_list.length; i++) {
-				[, mount_dir, fs_type] = mount_list[i].match(mount_entry);
-				if (fs_types_to_measure.indexOf(fs_type) == -1) {
-					continue;
-				}
-				GTop.glibtop_get_fsusage(usage, mount_dir);
-				directory_stats.push({
-					'name': mount_dir,
-					'free_size': usage.bavail * usage.block_size
-				});
-			}
-
-			return directories.getTopDirectories(directory_stats, 'free_size', 3);
+			return new Promise((resolve, reject) => {
+				GLib.idle_add(GLib.PRIORITY_LOW, Lang.bind(this, function(contents) {
+					try {
+						let mount_list = contents.split("\n");
+						mount_list.splice(-2);	// remove the last two empty lines
+						let directory_stats = [];
+						for (let i = 0; i < mount_list.length; i++) {
+							let [, mount_dir, fs_type] = mount_list[i].match(mount_entry);
+							if (fs_types_to_measure.indexOf(fs_type) == -1) {
+								continue;
+							}
+							GTop.glibtop_get_fsusage(usage, mount_dir);
+							directory_stats.push({
+								'name': mount_dir,
+								'free_size': usage.bavail * usage.block_size
+							});
+						}
+						resolve(directories.getTopDirectories(directory_stats, 'free_size', 3));
+					} catch (e) {
+						reject(e);
+					}
+					return GLib.SOURCE_REMOVE;
+				}, contents));
+			});
 		});
-
 	};
 };
 
@@ -411,14 +438,17 @@ const SwapMeter = function() {
 	this.observers = [];
 	let swap_utility = new Util.Swap;
 	let processes = new Util.Processes;
+	this._patterns = {
+		'swaptotal': new RegExp('swaptotal.*?(\\d+)', 'i'),
+		'swapfree': new RegExp('swapfree.*?(\\d+)', 'i'),
+	};
 
 	this.loadData = function() {
+		let patterns = this._patterns;
 		return FactoryModule.AbstractFactory.create('file', this, '/proc/meminfo').read().then(contents => {
 			let statistics = {};
-			let columns = ['swaptotal','swapfree'];
-
-			for (let index in columns) {
-				statistics[columns[index]] = parseInt(contents.match(new RegExp(columns[index] + '.*?(\\d+)', 'i')).pop());
+			for (let column in patterns) {
+				statistics[column] = parseInt(contents.match(patterns[column]).pop());
 			}
 			return statistics;
 		});
