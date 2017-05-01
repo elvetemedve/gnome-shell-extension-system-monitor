@@ -30,12 +30,13 @@ function MeterSubject() {
 		return -1;
 	};
 
-	this.notify = function(percent, processes, system_load, directories, has_activity) {
+	this.notify = function(percent, processes, interfaces, system_load, directories, has_activity) {
 		for (let i = 0; i < this.observers.length; i++) {
 			this.observers[i].update(
 				{
 					percent: percent,
 					processes: processes,
+                    interfaces: interfaces,
 					system_load: system_load,
 					directories: directories,
 					has_activity: has_activity
@@ -60,6 +61,7 @@ MeterSubject.prototype.notifyAll = function() {
 		Promise.all([
 			this.calculateUsage(),
 			this.getProcesses(),
+            this.getInterfaces(),
 			this.getSystemLoad(),
 			this.getDirectories(),
 			this.hasActivity()
@@ -86,6 +88,19 @@ MeterSubject.prototype.calculateUsage = function() {
  * { "command": "/path/to/binary", "id": 123 }
  */
 MeterSubject.prototype.getProcesses = function() {
+	return new Promise(resolve => {
+		resolve([]);
+	});
+};
+
+/**
+ * Return the list of network interfaces with related data.
+ *
+ * The returned array expected to be sorted by interface speed in descending order.
+ * An object should look like this:
+ * { "name": "eth0", "upload": 1234, "download": 4321 }
+ */
+MeterSubject.prototype.getInterfaces = function() {
 	return new Promise(resolve => {
 		resolve([]);
 	});
@@ -340,39 +355,62 @@ const StorageMeter = function() {
 StorageMeter.prototype = new MeterSubject();
 
 
-const NetworkMeter = function() {
+const NetworkMeter = function(refresh_interval) {
 	this.observers = [];
 	this._statistics = {};
 	this._bandwidths = {};
+    this._speeds = [];
+    this._refresh_interval = refresh_interval;
 
 	this.loadData = function() {
 		return FactoryModule.AbstractFactory.create('file', this, '/sys/class/net').list().then(files => {
-			let statistics = {};
+			let device_names = [];
 			let promises = [];
+			let callback = function(device_name) {
+				return contents => {
+					let is_loopback_interface = parseInt(contents) == 772;
+					return FactoryModule.AbstractFactory.create('file', this, '/sys/class/net/' + device_name + '/operstate').read().then(contents => {
+                        let is_interface_up = contents.trim() == 'up';
+						if (is_loopback_interface || is_interface_up) {
+							let receive_promise = FactoryModule.AbstractFactory.create('file', this, '/sys/class/net/' + device_name + '/statistics/rx_bytes').read().then(contents => {
+								return parseInt(contents);
+							});
+
+							let transmit_promise = FactoryModule.AbstractFactory.create('file', this, '/sys/class/net/' + device_name + '/statistics/tx_bytes').read().then(contents => {
+								return parseInt(contents);
+							});
+
+                            let is_wireless_interface = FactoryModule.AbstractFactory.create('file', this, '/sys/class/net/' + device_name + '/wireless').exists().then(exists => {
+                                return exists;
+                            });
+
+							return Promise.all([receive_promise, transmit_promise, is_wireless_interface]).then(bytes => {
+								return {
+									rx_bytes: bytes[0],
+									tx_bytes: bytes[1],
+                                    type: is_loopback_interface ? 'loopback' : (bytes[2] ? 'wireless' : 'wired')
+								};
+							});
+						}
+						return new Promise(resolve => {
+							resolve({});
+						});
+					});
+				}
+			};
 			for (let device_name of files) {
-				let promise = FactoryModule.AbstractFactory.create('file', this, '/sys/class/net/' + device_name + '/operstate').read().then(contents => {
-					if (contents.trim() == 'up') {
-						statistics[device_name] = {};
-
-						let receive_promise = FactoryModule.AbstractFactory.create('file', this, '/sys/class/net/' + device_name + '/statistics/rx_bytes').read().then(contents => {
-							return parseInt(contents);
-						});
-
-						let transmit_promise = FactoryModule.AbstractFactory.create('file', this, '/sys/class/net/' + device_name + '/statistics/tx_bytes').read().then(contents => {
-							return parseInt(contents);
-						});
-
-						return Promise.all([receive_promise, transmit_promise]).then(bytes => {
-							statistics[device_name].rx_bytes = bytes[0];
-							statistics[device_name].tx_bytes = bytes[1];
-						});
-					}
-					return false;
-				});
+				let promise = FactoryModule.AbstractFactory.create('file', this, '/sys/class/net/' + device_name + '/type').read().then(new callback(device_name));
+				device_names.push(device_name);
 				promises.push(promise);
 			}
 
-			return Promise.all(promises).then(() => {
+			return Promise.all(promises).then((raw_statistics) => {
+				let statistics = {};
+				for (var i = 0; i < raw_statistics.length; i++) {
+					if (Object.keys(raw_statistics[i]).length >= 2) {
+						statistics[device_names[i]] = raw_statistics[i];
+					}
+				}
 				return statistics;
 			});
 		});
@@ -384,8 +422,9 @@ const NetworkMeter = function() {
 				let speeds = {};
 				for (let index in statistics) {
 					speeds[index] = {};
-					speeds[index].upload = statistics[index].tx_bytes - (this._statistics[index] != undefined ? this._statistics[index].tx_bytes : statistics[index].tx_bytes);
-					speeds[index].download = statistics[index].rx_bytes - (this._statistics[index] != undefined ? this._statistics[index].rx_bytes : statistics[index].rx_bytes);
+					speeds[index].upload = (statistics[index].tx_bytes - (this._statistics[index] != undefined ? this._statistics[index].tx_bytes : statistics[index].tx_bytes)) / this._refresh_interval;
+					speeds[index].download = (statistics[index].rx_bytes - (this._statistics[index] != undefined ? this._statistics[index].rx_bytes : statistics[index].rx_bytes)) / this._refresh_interval;
+                    speeds[index].type = statistics[index].type;
 				}
 				return speeds;
 			};
@@ -410,9 +449,9 @@ const NetworkMeter = function() {
 				return usages;
 			}
 
-			let speeds = calculate_speeds.call(this, statistics);
-			this._bandwidths = calculate_bandwidths.call(this, speeds);
-			let usages = calculate_interface_usages.call(this, speeds);
+			this._speeds = calculate_speeds.call(this, statistics);
+			this._bandwidths = calculate_bandwidths.call(this, this._speeds);
+			let usages = calculate_interface_usages.call(this, this._speeds);
 			let sum_percent = 0;
 			for (let index in usages) {
 				sum_percent += usages[index];
@@ -425,6 +464,19 @@ const NetworkMeter = function() {
 			return this.usage;
 		});
 	};
+
+    this.getInterfaces = function() {
+    	return new Promise(resolve => {
+            let interfaces = [];
+            for (let i in this._speeds) {
+                interfaces.push({name: i, upload: this._speeds[i].upload, download: this._speeds[i].download, type: this._speeds[i].type});
+            }
+            interfaces.sort(function(a, b) {
+                return (a.upload + a.download > b.upload + b.download) ? -1 : (a.upload + a.download < b.upload + b.download ? 1 : 0);
+            });
+    		resolve(interfaces);
+    	});
+    };
 
 	this.destroy = function() {
 		FactoryModule.AbstractFactory.destroy('file', this);

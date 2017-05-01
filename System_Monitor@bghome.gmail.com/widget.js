@@ -22,8 +22,7 @@ let BaseMenuItem = new Lang.Class({
         this.parent(options);
 
         if (icon) {
-            this.icon = icon;
-            this.actor.add(this.icon);
+            this.setIcon(icon);
         }
 
         this.label = new St.Label({text: text, style_class: "item-label"});
@@ -70,7 +69,33 @@ let BaseMenuItem = new Lang.Class({
     },
 
     setIcon: function(icon) {
-        this.icon.set_child(icon);
+        this.icon = icon;
+        this.actor.add(this.icon);
+    },
+
+    switchToIcon: function(icon) {
+        let children = this.actor.get_children();
+        let position = -1;
+        for (let i in children) {
+            if (children[i] == this.icon) {
+                position = i;
+                break;
+            }
+        }
+
+        if (position != -1) {
+            this.actor.remove_actor(this.icon);
+            this.icon = icon;
+            this.actor.insert_child_at_index(this.icon, position);
+        }
+    },
+
+    hideIcon: function() {
+        this.icon.hide();
+    },
+
+    showIcon: function() {
+        this.icon.show();
     },
 
     setSummaryText: function(text) {
@@ -128,6 +153,97 @@ const StateItem = new Lang.Class({
     _init: function(text) {
         this.parent(text, {"activate": false});
     }
+});
+
+const InterfaceItem = new Lang.Class({
+    Name: "InterfaceItem",
+    Extends: BaseMenuItem,
+
+    _init: function(text) {
+        let icon = new St.Icon({
+            icon_name: 'network-wired-no-route-symbolic',
+            icon_size: 14,
+            style_class: 'system-status-icon'
+        });
+        this.parent(text, {"activate": false, "icon": icon});
+        this.label.style_class += ' interface-label';
+
+        this.download_icon = new St.Icon({
+            icon_name: 'network-receive-symbolic',
+            icon_size: 14,
+            style_class: 'system-status-icon'
+        });
+        this.upload_icon = new St.Icon({
+            icon_name: 'network-transmit-symbolic',
+            icon_size: 14,
+            style_class: 'system-status-icon'
+        });
+        this.download_text = new St.Label({
+            text: 'loading...',
+            style_class: 'bytes-text'
+        });
+        this.upload_text = new St.Label({
+            text: 'loading...',
+            style_class: 'bytes-text'
+        });
+        this.actor.add(this.download_text, {expand: true, x_fill: true, x_align: St.Align.END});
+        this.actor.add(this.download_icon, {expand: true, x_fill: true, x_align: St.Align.END});
+        this.actor.add(this.upload_text, {expand: true, x_fill: true, x_align: St.Align.END});
+        this.actor.add(this.upload_icon, {expand: true, x_fill: true, x_align: St.Align.END});
+    },
+    switchToLoopBackIcon : function() {
+        this.switchToIcon(
+            new St.Icon({
+                icon_name: 'computer-symbolic',
+                icon_size: 14,
+                style_class: 'system-status-icon'
+            })
+        );
+    },
+    switchToWiredIcon : function() {
+        this.switchToIcon(
+            new St.Icon({
+                icon_name: 'network-wired-symbolic',
+                icon_size: 14,
+                style_class: 'system-status-icon'
+            })
+        );
+    },
+    switchToWirelessIcon : function() {
+        this.switchToIcon(
+            new St.Icon({
+                icon_name: 'network-wireless-symbolic',
+                icon_size: 14,
+                style_class: 'system-status-icon'
+            })
+        );
+    },
+    switchToUnknownIcon : function() {
+        this.switchToIcon(
+            new St.Icon({
+                icon_name: 'network-wired-no-route-symbolic',
+                icon_size: 14,
+                style_class: 'system-status-icon'
+            })
+        );
+    },
+    setDownloadText: function(text) {
+        this.download_text.text = text;
+    },
+    setUploadText: function(text) {
+        this.upload_text.text = text;
+    },
+    hideIcon: function() {
+        this.icon.hide();
+        this.download_icon.hide();
+        this.upload_icon.hide();
+    },
+
+    showIcon: function() {
+        this.icon.show();
+        this.download_icon.show();
+        this.upload_icon.show();
+    },
 });
 
 const Separator = new Lang.Class({
@@ -268,6 +384,48 @@ const DirectoriesContainer = new Lang.Class({
                 );
             } else {
                 this._menu_items[i].setLabel(' ');
+            }
+        }
+    }
+});
+
+const NetworkInterfaceItemsContainer = new Lang.Class({
+    Name: "NetworkInterfaceItemsContainer",
+    Extends: MeterContainer,
+
+    _init: function() {
+        this.parent();
+        this._network = new Util.Network();
+    },
+
+    update: function(state) {
+        MeterContainer.prototype.update.call(this, state);
+
+        for (let i = 0; i < this._menu_items.length; i++) {
+            if (i in state.interfaces) {
+                let network_interface = state.interfaces[i];
+                this._menu_items[i].setLabel(network_interface.name + ': ');
+                this._menu_items[i].setDownloadText(this._network.formatBytes(network_interface.download));
+                this._menu_items[i].setUploadText(this._network.formatBytes(network_interface.upload));
+                switch(network_interface.type) {
+                    case 'loopback':
+                        this._menu_items[i].switchToLoopBackIcon();
+                        break;
+                    case 'wired':
+                        this._menu_items[i].switchToWiredIcon();
+                        break;
+                    case 'wireless':
+                        this._menu_items[i].switchToWirelessIcon();
+                        break;
+                    default:
+                        this._menu_items[i].switchToUnknownIcon();
+                }
+                this._menu_items[i].showIcon();
+            } else {
+                this._menu_items[i].setLabel(' ');
+                this._menu_items[i].setDownloadText(' ');
+                this._menu_items[i].setUploadText(' ');
+                this._menu_items[i].hideIcon();
             }
         }
     }

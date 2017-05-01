@@ -116,6 +116,28 @@ let Directories = new Lang.Class({
     }
 });
 
+let Network = new Lang.Class({
+    Name: "Network",
+
+    /**
+     * Format the input bytes to the closet possible size unit.
+     *
+     * @param int bytes Bytes to format
+     * @param int decimals Number of decimals to display. Defaults is 2.
+     * @return string
+     */
+    formatBytes: function(bytes, decimals) {
+        if (bytes == 0) {
+            return '0 B';
+        }
+        let kilo = 1000;
+        let expected_decimals = decimals || 2;
+        let sizes = ['B/s', 'kb/s', 'Mb/s', 'Gb/s', 'Tb/s', 'Pb/s', 'Eb/s', 'Zb/s', 'Yb/s'];
+        let i = Math.floor(Math.log(bytes) / Math.log(kilo));
+        return parseFloat((bytes / Math.pow(kilo, i)).toFixed(expected_decimals)) + ' ' + sizes[i];
+    }
+});
+
 let Swap = new Lang.Class({
     Name: "Swap",
 

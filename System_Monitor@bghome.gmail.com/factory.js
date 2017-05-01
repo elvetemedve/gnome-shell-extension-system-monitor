@@ -179,7 +179,7 @@ MeterWidgetFactory.prototype.create = function(type, options) {
         meter_widget = new Widget.DirectoriesContainer();
 	} else if (type == PrefsKeys.NETWORK_METER) {
 		title = 'Network';
-        meter_widget = new Widget.ProcessItemsContainer();
+        meter_widget = new Widget.NetworkInterfaceItemsContainer();
 	} else if (type == PrefsKeys.SWAP_METER) {
 		title = 'Virtual memory';
         meter_widget = new Widget.ProcessItemsContainer();
@@ -206,12 +206,14 @@ MeterWidgetItemFactory.prototype.create = function(type, options) {
 	switch (type) {
         case PrefsKeys.CPU_METER:
         case PrefsKeys.MEMORY_METER:
-        case PrefsKeys.NETWORK_METER:
         case PrefsKeys.SWAP_METER:
             return new Widget.ProcessItem('loading...', "edit-delete-symbolic", function(actor, event, state) {
                 log('Process called "{name}" with PID {pid} is going to be killed by user resuest.'.replace('{name}', state.command).replace('{pid}', state.pid));
                 (new Util.Process(state.pid)).kill();
             });
+
+        case PrefsKeys.NETWORK_METER:
+            return new Widget.InterfaceItem('loading...');
 
         case PrefsKeys.STORAGE_METER:
             return new Widget.MountItem('loading...');

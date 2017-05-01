@@ -85,11 +85,14 @@ const Menu = new Lang.Class({
 
         if (meter == undefined) {
             switch (type) {
-              case PrefsKeys.MEMORY_METER:
-                meter = FactoryModule.AbstractFactory.create('meter', type, this._settings.get_string(PrefsKeys.MEMORY_CALCULATION_METHOD));
-                break;
-              default:
-                  meter = FactoryModule.AbstractFactory.create('meter', type);
+                case PrefsKeys.MEMORY_METER:
+                    meter = FactoryModule.AbstractFactory.create('meter', type, this._settings.get_string(PrefsKeys.MEMORY_CALCULATION_METHOD));
+                    break;
+                case PrefsKeys.NETWORK_METER:
+                    meter = FactoryModule.AbstractFactory.create('meter', type, this._settings.get_int(PrefsKeys.REFRESH_INTERVAL));
+                    break;
+                default:
+                    meter = FactoryModule.AbstractFactory.create('meter', type);
             }
             this._meters[type] = meter;
         }
