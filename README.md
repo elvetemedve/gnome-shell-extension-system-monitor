@@ -40,6 +40,8 @@ To remove all generated files, use the `rake cleanup` command.
 Extensions can be installed per-user in *~/.local/share/gnome-shell/extensions*, or system wide in */usr/share/gnome-shell/extensions* and */usr/local/share/gnome-shell/extensions*.
 You can simply extract the content of the zip archive to the proper location or use Gnome Tweak tool.
 
+Also don't forget to install the dependencies. You can find distribution specific instructions on the [Installation wiki page](https://github.com/elvetemedve/gnome-shell-extension-system-monitor/wiki/Installation).
+
 ### Requirements
 
 In order to run the extension, the following software is required to be installed:
