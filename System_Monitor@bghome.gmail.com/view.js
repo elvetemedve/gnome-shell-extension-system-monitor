@@ -44,7 +44,7 @@ const Menu = new Lang.Class({
         this._addIndicatorToTopBar(this._settings.get_string(PrefsKeys.POSITION));
     },
     _addIndicatorToTopBar: function(position) {
-        Panel.addToStatusArea('system-monitor', this, this._indicator_sort_order, position);
+        Panel.addToStatusArea(Me.metadata.uuid, this, this._indicator_sort_order, position);
         this._indicator_previous_position = position;
     },
     _moveIndicatorOnTopBar: function(position) {
