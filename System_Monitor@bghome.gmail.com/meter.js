@@ -301,7 +301,7 @@ MemoryMeter.prototype = new MeterSubject();
 
 const StorageMeter = function() {
 	this.observers = [];
-	let mount_entry = new RegExp('^\\S+\\s+(\\S+)\\s+(\\S+)');
+	let mount_entry_pattern = new RegExp('^\\S+\\s+(\\S+)\\s+(\\S+)');
 	let fs_types_to_measure = [
 		'btrfs', 'exfat', 'ext2', 'ext3', 'ext4', 'f2fs',
 	 	'hfs', 'jfs', 'nilfs2', 'ntfs', 'reiser4', 'reiserfs', 'vfat', 'xfs',
@@ -327,11 +327,12 @@ const StorageMeter = function() {
 			return new Promise((resolve, reject) => {
 				GLib.idle_add(GLib.PRIORITY_LOW, Lang.bind(this, function(contents) {
 					try {
-						let mount_list = contents.split("\n");
-						mount_list.splice(-2);	// remove the last two empty lines
+						let mount_list = contents.split("\n").filter(function(mount_entry) {
+                            return mount_entry.trim().length > 0;
+                        });
 						let directory_stats = [];
 						for (let i = 0; i < mount_list.length; i++) {
-							let [, mount_dir, fs_type] = mount_list[i].match(mount_entry);
+							let [, mount_dir, fs_type] = mount_list[i].match(mount_entry_pattern);
 							if (fs_types_to_measure.indexOf(fs_type) == -1) {
 								continue;
 							}
