@@ -1,5 +1,8 @@
 # System Monitor
 
+[![codebeat badge](https://codebeat.co/badges/7d1c7fdf-19b1-402a-b222-b2791e868e1d)](https://codebeat.co/projects/github-com-elvetemedve-gnome-shell-extension-system-monitor-master)
+[![Build Status](https://travis-ci.org/elvetemedve/gnome-shell-extension-system-monitor.svg?branch=master)](https://travis-ci.org/elvetemedve/gnome-shell-extension-system-monitor)
+
 ## Introduction
 
 ### What is System Monitor?
