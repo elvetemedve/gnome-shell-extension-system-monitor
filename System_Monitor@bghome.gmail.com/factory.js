@@ -133,14 +133,15 @@ const FileFactory = (function() {
 				openedFiles[namespace] = {};
 			}
 
-			let file = openedFiles[namespace][filename];
+			let openedFilesInNs = openedFiles[namespace];
+			let file = openedFilesInNs[filename];
 
 			if (!!file) {
 				return file;
 			}
 
 			file = new FileModule.File(filename);
-			openedFiles[namespace][filename] = file;
+            openedFilesInNs[filename] = file;
 			return file;
 		},
 
