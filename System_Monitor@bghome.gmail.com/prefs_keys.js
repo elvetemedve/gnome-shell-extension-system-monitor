@@ -6,4 +6,5 @@ var NETWORK_METER = 'network-meter';
 var SWAP_METER = 'swap-meter';
 var LOAD_METER = 'load-meter';
 var POSITION = 'position';
+var LAYOUT = 'layout';
 var MEMORY_CALCULATION_METHOD = 'memory-calculation-method';
