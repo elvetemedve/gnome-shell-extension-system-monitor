@@ -8,7 +8,7 @@ const FactoryModule = Me.imports.factory;
 const Convenience = Me.imports.convenience;
 const PrefsKeys = Me.imports.prefs_keys;
 
-const Menu = new Lang.Class({
+var Menu = new Lang.Class({
     Name: 'Menu',
     Extends: PanelMenu.Button,
     _icons: {},

@@ -119,7 +119,7 @@ let BaseMenuItem = new Lang.Class({
     }
 });
 
-const ResourceTitleItem = new Lang.Class({
+var ResourceTitleItem = new Lang.Class({
     Name: "ResourceTitleItem",
     Extends: BaseMenuItem,
 
@@ -128,7 +128,7 @@ const ResourceTitleItem = new Lang.Class({
     }
 });
 
-const ProcessItem = new Lang.Class({
+var ProcessItem = new Lang.Class({
     Name: "ProcessItem",
     Extends: BaseMenuItem,
 
@@ -137,7 +137,7 @@ const ProcessItem = new Lang.Class({
     }
 });
 
-const MountItem = new Lang.Class({
+var MountItem = new Lang.Class({
     Name: "MountItem",
     Extends: BaseMenuItem,
 
@@ -146,7 +146,7 @@ const MountItem = new Lang.Class({
     }
 });
 
-const StateItem = new Lang.Class({
+var StateItem = new Lang.Class({
     Name: "StateItem",
     Extends: BaseMenuItem,
 
@@ -155,7 +155,7 @@ const StateItem = new Lang.Class({
     }
 });
 
-const InterfaceItem = new Lang.Class({
+var InterfaceItem = new Lang.Class({
     Name: "InterfaceItem",
     Extends: BaseMenuItem,
 
@@ -251,7 +251,7 @@ const Separator = new Lang.Class({
     Extends: PopupMenu.PopupSeparatorMenuItem
 });
 
-const MeterAreaContainer = new Lang.Class({
+var MeterAreaContainer = new Lang.Class({
     Name: "MeterAreaContainer",
     Extends: St.BoxLayout,
 
@@ -320,7 +320,7 @@ const MeterContainer = new Lang.Class({
     }
 });
 
-const ProcessItemsContainer = new Lang.Class({
+var ProcessItemsContainer = new Lang.Class({
     Name: "ProcessItemsContainer",
     Extends: MeterContainer,
 
@@ -342,7 +342,7 @@ const ProcessItemsContainer = new Lang.Class({
     }
 });
 
-const SystemLoadItemsContainer = new Lang.Class({
+var SystemLoadItemsContainer = new Lang.Class({
     Name: "SystemLoadItemsContainer",
     Extends: MeterContainer,
 
@@ -362,7 +362,7 @@ const SystemLoadItemsContainer = new Lang.Class({
     }
 });
 
-const DirectoriesContainer = new Lang.Class({
+var DirectoriesContainer = new Lang.Class({
     Name: "DirectoriesContainer",
     Extends: MeterContainer,
 
@@ -389,7 +389,7 @@ const DirectoriesContainer = new Lang.Class({
     }
 });
 
-const NetworkInterfaceItemsContainer = new Lang.Class({
+var NetworkInterfaceItemsContainer = new Lang.Class({
     Name: "NetworkInterfaceItemsContainer",
     Extends: MeterContainer,
 

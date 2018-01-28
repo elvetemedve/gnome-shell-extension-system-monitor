@@ -7,7 +7,7 @@ const Me = imports.misc.extensionUtils.getCurrentExtension();
 const FactoryModule = Me.imports.factory;
 const Promise = Me.imports.helpers.promise.Promise;
 
-let Process = new Lang.Class({
+var Process = new Lang.Class({
     Name: "Process",
 
     _init: function(id) {
@@ -19,7 +19,7 @@ let Process = new Lang.Class({
     }
 });
 
-let Processes = new Lang.Class({
+var Processes = new Lang.Class({
     Name: "Processes",
 
     /**
@@ -76,7 +76,7 @@ let Processes = new Lang.Class({
     }
 });
 
-let Directories = new Lang.Class({
+var Directories = new Lang.Class({
     Name: "Directories",
 
     /**
@@ -116,7 +116,7 @@ let Directories = new Lang.Class({
     }
 });
 
-let Network = new Lang.Class({
+var Network = new Lang.Class({
     Name: "Network",
 
     /**
@@ -138,7 +138,7 @@ let Network = new Lang.Class({
     }
 });
 
-let Swap = new Lang.Class({
+var Swap = new Lang.Class({
     Name: "Swap",
 
     _init: function(id) {

@@ -9,7 +9,7 @@ const Lang = imports.lang;
 const Gio = imports.gi.Gio;
 const PrefsKeys = Me.imports.prefs_keys;
 
-const AbstractFactory = (function() {
+var AbstractFactory = (function() {
 
     var types = {};
 
