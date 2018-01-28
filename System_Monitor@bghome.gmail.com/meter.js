@@ -147,7 +147,7 @@ MeterSubject.prototype.hasActivity = function() {
 
 MeterSubject.prototype.destroy = function() {};
 
-const CpuMeter = function() {
+var CpuMeter = function() {
 	this.observers = [];
 	this._statistics = {
 		cpu: { user:0, nice:0, guest:0, guest_nice:0, system:0, irq: 0, softirq: 0, idle: 0, iowait: 0, steal: 0 },
@@ -227,7 +227,7 @@ const CpuMeter = function() {
 CpuMeter.prototype = new MeterSubject();
 
 
-const MemoryMeter = function(calculation_method) {
+var MemoryMeter = function(calculation_method) {
 	this.observers = [];
 	if (-1 == ['ram_only', 'all'].indexOf(calculation_method)) {
 			throw new RangeError('Unknown memory calculation method given: ' + calculation_method);
@@ -299,7 +299,7 @@ const MemoryMeter = function(calculation_method) {
 MemoryMeter.prototype = new MeterSubject();
 
 
-const StorageMeter = function() {
+var StorageMeter = function() {
 	this.observers = [];
 	let mount_entry_pattern = new RegExp('^\\S+\\s+(\\S+)\\s+(\\S+)');
 	let fs_types_to_measure = [
@@ -356,7 +356,7 @@ const StorageMeter = function() {
 StorageMeter.prototype = new MeterSubject();
 
 
-const NetworkMeter = function(refresh_interval) {
+var NetworkMeter = function(refresh_interval) {
 	this.observers = [];
 	this._statistics = {};
 	this._bandwidths = {};
@@ -487,7 +487,7 @@ const NetworkMeter = function(refresh_interval) {
 NetworkMeter.prototype = new MeterSubject();
 
 
-const SwapMeter = function() {
+var SwapMeter = function() {
 	this.observers = [];
 	let swap_utility = new Util.Swap;
 	let processes = new Util.Processes;
@@ -541,7 +541,7 @@ const SwapMeter = function() {
 SwapMeter.prototype = new MeterSubject();
 
 
-const SystemLoadMeter = function() {
+var SystemLoadMeter = function() {
 	this.observers = [];
 	this._number_of_cpu_cores = null;
 	let load = new GTop.glibtop_loadavg();

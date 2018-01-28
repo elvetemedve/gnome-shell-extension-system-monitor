@@ -8,7 +8,7 @@ let color_range = [];
 // CSS class name.
 let caution_class = '';
 
-const Icon = new Lang.Class({
+var Icon = new Lang.Class({
     Name: 'Icon',
     Extends: St.Icon
 });
