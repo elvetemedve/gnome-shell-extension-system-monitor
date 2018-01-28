@@ -214,6 +214,21 @@ const SystemMonitorPrefsWidget = new GObject.Class({
     },
 
     _get_tab_config: function() {
+        let pages = [
+            {
+                name: 'General',
+                page: this._createGeneralPage()
+            },
+            {
+                name: 'Memory',
+                page: this._createMemoryPage()
+            }
+        ];
+
+        return pages;
+    },
+
+    _createGeneralPage: function() {
         let general_page = new PagePrefsGrid();
         general_page.add_spin('Refresh interval in seconds.', PrefsKeys.REFRESH_INTERVAL, {
             lower: 1,
@@ -221,9 +236,13 @@ const SystemMonitorPrefsWidget = new GObject.Class({
             step_increment: 1
         });
         general_page.add_combo('Position on top bar.', PrefsKeys.POSITION, [
-          { "title": "Left side", "value": "left" },
-          { "title": "Center", "value": "center" },
-          { "title": "Right side", "value": "right" }
+            { "title": "Left side", "value": "left" },
+            { "title": "Center", "value": "center" },
+            { "title": "Right side", "value": "right" }
+        ], 'string');
+        general_page.add_combo('Layout of drop-down information panel.', PrefsKeys.LAYOUT, [
+            { "title": "Horizontal", "value": "horizontal" },
+            { "title": "Vertical", "value": "vertical" }
         ], 'string');
         general_page.add_boolean('Enable CPU indicator.', PrefsKeys.CPU_METER);
         general_page.add_boolean('Enable memory indicator.', PrefsKeys.MEMORY_METER);
@@ -231,25 +250,16 @@ const SystemMonitorPrefsWidget = new GObject.Class({
         general_page.add_boolean('Enable network indicator.', PrefsKeys.NETWORK_METER);
         general_page.add_boolean('Enable swap indicator.', PrefsKeys.SWAP_METER);
         general_page.add_boolean('Enable system load indicator.', PrefsKeys.LOAD_METER);
+        return general_page;
+    },
 
+    _createMemoryPage: function() {
         let memory_page = new PagePrefsGrid();
         memory_page.add_combo('Memory calculation method for process list sorting.', PrefsKeys.MEMORY_CALCULATION_METHOD, [
-          { "title": "RAM only", "value": "ram_only" },
-          { "title": "All memory", "value": "all" }
+            { "title": "RAM only", "value": "ram_only" },
+            { "title": "All memory", "value": "all" }
         ], 'string');
-
-        let pages = [
-            {
-                name: 'General',
-                page: general_page
-            },
-            {
-                name: 'Memory',
-                page: memory_page
-            }
-        ];
-
-        return pages;
+        return memory_page;
     },
 
     _init_stack: function(stack) {

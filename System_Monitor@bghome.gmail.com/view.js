@@ -37,6 +37,7 @@ var Menu = new Lang.Class({
         }
 
         this._addPositionSettingChangedHandler();
+        this._addLayoutSettingChangedHandler();
         this._addMemoryCalculationSettingChangedHandler();
 
     	  this.actor.add_actor(this._layout);
@@ -125,6 +126,13 @@ var Menu = new Lang.Class({
     _addPositionSettingChangedHandler: function() {
         let event_id = this._settings.connect('changed::' + PrefsKeys.POSITION, Lang.bind(this, function(settings, key) {
             this._moveIndicatorOnTopBar(settings.get_string(key));
+        }));
+        this._event_handler_ids.push(event_id);
+    },
+    _addLayoutSettingChangedHandler: function() {
+        let event_id = this._settings.connect('changed::' + PrefsKeys.LAYOUT, Lang.bind(this, function(settings, key) {
+            let isVertical = 'vertical' === settings.get_string(key);
+            this._widget_area_container.vertical = isVertical;
         }));
         this._event_handler_ids.push(event_id);
     },

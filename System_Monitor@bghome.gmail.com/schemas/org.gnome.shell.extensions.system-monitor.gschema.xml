@@ -41,6 +41,11 @@
         <summary>Position on top bar.</summary>
         <description>Controls the vertical alignment of the indicator widget on the top bar.</description>
     </key>
+      <key type="s" name="layout">
+        <default>"horizontal"</default>
+        <summary>Layout of drop-down information panel.</summary>
+        <description>Controls the layout of the drop-down information panel. It can be horizontal or vertical.</description>
+    </key>
     <key type="s" name="memory-calculation-method">
         <default>"ram_only"</default>
         <summary>Memory calculation method for process list sorting.</summary>
