@@ -25,6 +25,7 @@ var Menu = new Lang.Class({
         this.available_meters = [PrefsKeys.CPU_METER, PrefsKeys.MEMORY_METER, PrefsKeys.STORAGE_METER, PrefsKeys.NETWORK_METER, PrefsKeys.SWAP_METER, PrefsKeys.LOAD_METER];
 
         this._widget_area_container = FactoryModule.AbstractFactory.create('meter-area-widget');
+        this._widget_area_container.vertical = this._settings.get_string(PrefsKeys.LAYOUT) === 'vertical';
         this.menu.box.add_child(this._widget_area_container);
 
         for (let index in this.available_meters) {
