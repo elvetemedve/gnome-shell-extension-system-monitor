@@ -325,7 +325,7 @@ var ProcessItemsContainer = new Lang.Class({
     Extends: MeterContainer,
 
     update: function(state) {
-        MeterContainer.prototype.update.call(this, state);
+        this.parent(state);
 
         for (let i = 0; i < this._menu_items.length; i++) {
             if (i in state.processes) {
@@ -347,7 +347,7 @@ var SystemLoadItemsContainer = new Lang.Class({
     Extends: MeterContainer,
 
     update: function(state) {
-        MeterContainer.prototype.update.call(this, state);
+        this.parent(state);
 
         let load = state.system_load;
         this._menu_items[0].setLabel(load.load_average_1 + ' / ' + load.load_average_5 + ' / ' + load.load_average_15);
@@ -372,7 +372,7 @@ var DirectoriesContainer = new Lang.Class({
     },
 
     update: function(state) {
-        MeterContainer.prototype.update.call(this, state);
+        this.parent(state);
 
         for (let i = 0; i < this._menu_items.length; i++) {
             if (i in state.directories) {
@@ -399,7 +399,7 @@ var NetworkInterfaceItemsContainer = new Lang.Class({
     },
 
     update: function(state) {
-        MeterContainer.prototype.update.call(this, state);
+        this.parent(state);
 
         for (let i = 0; i < this._menu_items.length; i++) {
             if (i in state.interfaces) {

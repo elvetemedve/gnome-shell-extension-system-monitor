@@ -51,5 +51,10 @@
         <summary>Memory calculation method for process list sorting.</summary>
         <description>Controls which type of memory needs to be included when computing memory usage for a process.</description>
     </key>
+    <key type="b" name="show-activity">
+        <default>true</default>
+        <summary>Show activity on top bar.</summary>
+        <description>When the indicator value raised above the given treshold, then the indicator icon gets a circle transparent background until the next refresh.</description>
+    </key>
   </schema>
 </schemalist>
