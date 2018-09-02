@@ -246,11 +246,6 @@ var InterfaceItem = new Lang.Class({
     },
 });
 
-const Separator = new Lang.Class({
-    Name: "Separator",
-    Extends: PopupMenu.PopupSeparatorMenuItem
-});
-
 var MeterAreaContainer = new Lang.Class({
     Name: "MeterAreaContainer",
     Extends: St.BoxLayout,
