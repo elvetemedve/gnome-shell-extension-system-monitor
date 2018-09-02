@@ -248,26 +248,23 @@ var InterfaceItem = new Lang.Class({
 
 var MeterAreaContainer = new Lang.Class({
     Name: "MeterAreaContainer",
-    Extends: St.BoxLayout,
+    Extends: PopupMenu.PopupBaseMenuItem,
 
-    _init: function() {
-        this.parent({"accessible-name": 'meterArea', "vertical": false});
-    },
     addMeter: function(meter, position) {
         if (!meter instanceof MeterContainer) {
             throw new TypeError("First argument of addMeter() method must be instance of MeterContainer.");
         }
         if (position == undefined) {
-            this.add_actor(meter);
+            this.actor.add_actor(meter);
         } else {
-            this.insert_child_at_index(meter, position);
+            this.actor.insert_child_at_index(meter, position);
         }
     },
     removeMeter: function(meter) {
         if (!meter instanceof MeterContainer) {
             throw new TypeError("First argument of removeMeter() method must be instance of MeterContainer.");
         }
-        this.remove_actor(meter);
+        this.actor.remove_actor(meter);
     }
 });
 

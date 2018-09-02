@@ -11,18 +11,9 @@
 
 .right-label
 {
-	min-width: 3em;
 	text-align: right;
 }
 
-.item-label
-{
-	max-width: 12em;
-    min-width: 8em;
-}
-.item-label.interface-label {
-    min-width: 1em;
-}
 .bytes-text {
     min-width: 4em;
     text-align: right;

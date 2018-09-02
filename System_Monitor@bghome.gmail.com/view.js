@@ -25,8 +25,8 @@ var Menu = new Lang.Class({
         this.available_meters = [PrefsKeys.CPU_METER, PrefsKeys.MEMORY_METER, PrefsKeys.STORAGE_METER, PrefsKeys.NETWORK_METER, PrefsKeys.SWAP_METER, PrefsKeys.LOAD_METER];
 
         this._widget_area_container = FactoryModule.AbstractFactory.create('meter-area-widget');
-        this._widget_area_container.vertical = this._settings.get_string(PrefsKeys.LAYOUT) === 'vertical';
-        this.menu.box.add_child(this._widget_area_container);
+        this._widget_area_container.actor.vertical = this._settings.get_string(PrefsKeys.LAYOUT) === 'vertical';
+        this.menu.addMenuItem(this._widget_area_container);
 
         this._initIconsAndWidgets();
 
@@ -145,7 +145,7 @@ var Menu = new Lang.Class({
     _addLayoutSettingChangedHandler: function() {
         let event_id = this._settings.connect('changed::' + PrefsKeys.LAYOUT, Lang.bind(this, function(settings, key) {
             let isVertical = 'vertical' === settings.get_string(key);
-            this._widget_area_container.vertical = isVertical;
+            this._widget_area_container.actor.vertical = isVertical;
         }));
         this._event_handler_ids.push(event_id);
     },
@@ -191,6 +191,7 @@ var Menu = new Lang.Class({
             this._meters[type].removeObserver(meter_widget);
         }
         this._widget_area_container.removeMeter(meter_widget);
+        this._widget_area_container.destroy();
         delete this._meter_widgets[type];
     },
     destroy: function() {
