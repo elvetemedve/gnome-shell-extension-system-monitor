@@ -192,7 +192,6 @@ var Menu = new Lang.Class({
         }
         this._widget_area_container.removeMeter(meter_widget);
         delete this._meter_widgets[type];
-        meter_widget.destroy();
     },
     destroy: function() {
         let meters = this._meters;
