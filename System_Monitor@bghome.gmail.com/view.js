@@ -178,6 +178,7 @@ var Menu = new Lang.Class({
         for (let index in this._event_handler_ids) {
             this._settings.disconnect(this._event_handler_ids[index]);
         }
+        this._event_handler_ids = [];
     },
     _createMeterWidget: function(type, icon) {
         let meter_widget = FactoryModule.AbstractFactory.create('meter-widget', type, icon);
@@ -190,8 +191,6 @@ var Menu = new Lang.Class({
         if (this._meters[type]) {
             this._meters[type].removeObserver(meter_widget);
         }
-        this._widget_area_container.removeMeter(meter_widget);
-        this._widget_area_container.destroy();
         delete this._meter_widgets[type];
     },
     destroy: function() {

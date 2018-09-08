@@ -28,7 +28,7 @@ let BaseMenuItem = new Lang.Class({
         this.label = new St.Label({text: text, style_class: "item-label"});
         this.labelBin = new St.Bin({child: this.label});
         this.actor.add(this.labelBin);
-        this.connect('active-changed', Lang.bind(this, this._activeChanged));
+        this._change_event_id = this.connect('active-changed', Lang.bind(this, this._activeChanged));
 
         if (summary_text) {
             this.rightLabel = new St.Label({text: summary_text, style_class: "right-label"});
@@ -38,7 +38,7 @@ let BaseMenuItem = new Lang.Class({
 
         if (button_icon) {
             this.button = new St.Button();
-            this.button.connect('clicked', Lang.bind(this, function(actor, event) {
+            this.button._click_event_id = this.button.connect('clicked', Lang.bind(this, function(actor, event) {
                 button_callback.call(this.button, actor, event, this.getState());
             }));
             this.button_icon = new St.Icon({
@@ -52,9 +52,13 @@ let BaseMenuItem = new Lang.Class({
     },
 
     destroy: function() {
-        this.disconnect('active-changed');
-        if (this.button instanceof St.Button) {
-            this.button.disconnect('clicked');
+        if (this._change_event_id) {
+            this.disconnect(this._change_event_id);
+            this._change_event_id = null;
+        }
+        if (this.button instanceof St.Button && this.button._click_event_id) {
+            this.button.disconnect(this.button._click_event_id);
+            this.button._click_event_id = null;
         }
         this.parent();
     },

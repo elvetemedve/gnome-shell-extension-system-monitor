@@ -156,7 +156,9 @@ MeterSubject.prototype.hasActivity = function() {
 	});
 };
 
-MeterSubject.prototype.destroy = function() {};
+MeterSubject.prototype.destroy = function() {
+	// FIXME cancel all pending Promises.
+};
 
 var CpuMeter = function(options) {
     if (options && options.activity_threshold) {
