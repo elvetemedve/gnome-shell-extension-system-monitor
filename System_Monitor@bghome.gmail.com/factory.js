@@ -54,8 +54,7 @@ IconFactory.prototype.concreteClass = IndicatorModule.Icon;
 // Create an indicator icon object, options will be passed to the real object's constructor.
 //
 // For working with themed icons see http://standards.freedesktop.org/icon-theme-spec/icon-theme-spec-latest.html
-IconFactory.prototype.create = function(type, options) {
-
+IconFactory.prototype.create = function(type, options, can_show_activity) {
 	let default_options = {
 		style_class: 'system-status-icon system-monitor-icon',
 		reactive: true,
@@ -82,17 +81,14 @@ IconFactory.prototype.create = function(type, options) {
 		throw new RangeError('Unknown indicator type "' + type + '" given.');
 	}
 
-	IconFactory.prototype.concreteClass.initColorRange(
-		[
-			{ red:190, green: 190, blue: 190 },
-			{ red:255, green: 204, blue: 0 },
-			{ red:255, green: 0, blue: 0 }
-		]
-	);
+    let range = [
+        { red:190, green: 190, blue: 190 },
+        { red:255, green: 204, blue: 0 },
+        { red:255, green: 0, blue: 0 }
+    ];
+	let caution_class = 'indicator-caution';
 
-	IconFactory.prototype.concreteClass.initCautionClass('indicator-caution');
-
-	return new IconFactory.prototype.concreteClass(constructor_options);
+	return new IconFactory.prototype.concreteClass(constructor_options, range, caution_class, can_show_activity);
 };
 
 AbstractFactory.registerObject('icon', IconFactory);
@@ -146,8 +142,9 @@ const FileFactory = (function() {
 		},
 
 		this.destroy = function(namespace) {
-			for (let filename in openedFiles[namespace]) {
-                delete openedFiles[namespace][filename];
+            let files = openedFiles[namespace];
+			for (let filename in files) {
+                delete files[filename];
 			}
 		}
 	};
@@ -167,7 +164,7 @@ AbstractFactory.registerObject('meter-area-widget', MeterAreaWidgetFactory);
 
 const MeterWidgetFactory = function() {};
 
-MeterWidgetFactory.prototype.create = function(type, options) {
+MeterWidgetFactory.prototype.create = function(type, options, icon) {
 	let title, meter_widget;
 	if (type == PrefsKeys.CPU_METER) {
 		title = 'CPU';
@@ -191,7 +188,7 @@ MeterWidgetFactory.prototype.create = function(type, options) {
 		throw new RangeError('Unknown meter type "' + type + '" given.');
 	}
 
-    meter_widget.addTitleItem(new Widget.ResourceTitleItem(title, AbstractFactory.create('icon', type, {icon_size: 32}), 'loading...'));
+    meter_widget.addTitleItem(new Widget.ResourceTitleItem(title, icon, 'loading...'));
     for (var i = 0; i < 3; i++) {
         meter_widget.addMenuItem(AbstractFactory.create('meter-widget-item', type, options));
     }

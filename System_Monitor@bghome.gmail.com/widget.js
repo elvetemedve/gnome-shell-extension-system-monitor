@@ -28,7 +28,7 @@ let BaseMenuItem = new Lang.Class({
         this.label = new St.Label({text: text, style_class: "item-label"});
         this.labelBin = new St.Bin({child: this.label});
         this.actor.add(this.labelBin);
-        this.connect('active-changed', Lang.bind(this, this._activeChanged));
+        this._change_event_id = this.connect('active-changed', Lang.bind(this, this._activeChanged));
 
         if (summary_text) {
             this.rightLabel = new St.Label({text: summary_text, style_class: "right-label"});
@@ -38,7 +38,7 @@ let BaseMenuItem = new Lang.Class({
 
         if (button_icon) {
             this.button = new St.Button();
-            this.button.connect('clicked', Lang.bind(this, function(actor, event) {
+            this.button._click_event_id = this.button.connect('clicked', Lang.bind(this, function(actor, event) {
                 button_callback.call(this.button, actor, event, this.getState());
             }));
             this.button_icon = new St.Icon({
@@ -52,9 +52,13 @@ let BaseMenuItem = new Lang.Class({
     },
 
     destroy: function() {
-        this.disconnect('active-changed');
-        if (this.button instanceof St.Button) {
-            this.button.disconnect('clicked');
+        if (this._change_event_id) {
+            this.disconnect(this._change_event_id);
+            this._change_event_id = null;
+        }
+        if (this.button instanceof St.Button && this.button._click_event_id) {
+            this.button.disconnect(this.button._click_event_id);
+            this.button._click_event_id = null;
         }
         this.parent();
     },
@@ -246,33 +250,25 @@ var InterfaceItem = new Lang.Class({
     },
 });
 
-const Separator = new Lang.Class({
-    Name: "Separator",
-    Extends: PopupMenu.PopupSeparatorMenuItem
-});
-
 var MeterAreaContainer = new Lang.Class({
     Name: "MeterAreaContainer",
-    Extends: St.BoxLayout,
+    Extends: PopupMenu.PopupBaseMenuItem,
 
-    _init: function() {
-        this.parent({"accessible-name": 'meterArea', "vertical": false});
-    },
     addMeter: function(meter, position) {
         if (!meter instanceof MeterContainer) {
             throw new TypeError("First argument of addMeter() method must be instance of MeterContainer.");
         }
         if (position == undefined) {
-            this.add_actor(meter);
+            this.actor.add_actor(meter);
         } else {
-            this.insert_child_at_index(meter, position);
+            this.actor.insert_child_at_index(meter, position);
         }
     },
     removeMeter: function(meter) {
         if (!meter instanceof MeterContainer) {
             throw new TypeError("First argument of removeMeter() method must be instance of MeterContainer.");
         }
-        this.remove_actor(meter);
+        this.actor.remove_actor(meter);
     }
 });
 
@@ -325,7 +321,7 @@ var ProcessItemsContainer = new Lang.Class({
     Extends: MeterContainer,
 
     update: function(state) {
-        MeterContainer.prototype.update.call(this, state);
+        this.parent(state);
 
         for (let i = 0; i < this._menu_items.length; i++) {
             if (i in state.processes) {
@@ -347,7 +343,7 @@ var SystemLoadItemsContainer = new Lang.Class({
     Extends: MeterContainer,
 
     update: function(state) {
-        MeterContainer.prototype.update.call(this, state);
+        this.parent(state);
 
         let load = state.system_load;
         this._menu_items[0].setLabel(load.load_average_1 + ' / ' + load.load_average_5 + ' / ' + load.load_average_15);
@@ -372,7 +368,7 @@ var DirectoriesContainer = new Lang.Class({
     },
 
     update: function(state) {
-        MeterContainer.prototype.update.call(this, state);
+        this.parent(state);
 
         for (let i = 0; i < this._menu_items.length; i++) {
             if (i in state.directories) {
@@ -399,7 +395,7 @@ var NetworkInterfaceItemsContainer = new Lang.Class({
     },
 
     update: function(state) {
-        MeterContainer.prototype.update.call(this, state);
+        this.parent(state);
 
         for (let i = 0; i < this._menu_items.length; i++) {
             if (i in state.interfaces) {

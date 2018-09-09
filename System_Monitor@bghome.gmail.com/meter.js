@@ -7,10 +7,18 @@ const FactoryModule = Me.imports.factory;
 const Util = Me.imports.util;
 const Promise = Me.imports.helpers.promise.Promise;
 
-function MeterSubject() {
+function MeterSubject(options) {
 	this.observers = [];
 	this.previous_usage = 0;
 	this.usage = 0;
+    this.activity_threshold = 0;
+
+    this.setActivityThreshold = function(value) {
+        if (value < 0 || value > 100) {
+            throw `Activity threshold must be within range [0, 100], but got "${value}."`;
+        }
+        this.activity_threshold = value;
+    }
 
 	this.add = function(object) {
 		this.observers.push(object);
@@ -56,18 +64,21 @@ MeterSubject.prototype.removeObserver = function(observer) {
 
 MeterSubject.prototype.notifyAll = function() {
 	if (this.observers.length > 0) {
-		this.previous_usage = this.usage;
-
 		Promise.all([
 			this.calculateUsage(),
 			this.getProcesses(),
             this.getInterfaces(),
 			this.getSystemLoad(),
-			this.getDirectories(),
-			this.hasActivity()
+			this.getDirectories()
 		]).then(params => {
-			this.notify.apply(this, params);
-		});
+            return this.hasActivity().then(activity => {
+                params.push(activity);
+                return params;
+            });
+		}).then(params => {
+            this.notify.apply(this, params);
+            this.previous_usage = this.usage;
+        });
 	}
 };
 
@@ -141,13 +152,18 @@ MeterSubject.prototype.getDirectories = function() {
  */
 MeterSubject.prototype.hasActivity = function() {
 	return new Promise(resolve => {
-		resolve(this.previous_usage < this.usage);
+		resolve(this.usage - this.previous_usage >= this.activity_threshold);
 	});
 };
 
-MeterSubject.prototype.destroy = function() {};
+MeterSubject.prototype.destroy = function() {
+	// FIXME cancel all pending Promises.
+};
 
-var CpuMeter = function() {
+var CpuMeter = function(options) {
+    if (options && options.activity_threshold) {
+        this.setActivityThreshold(options.activity_threshold);
+    }
 	this.observers = [];
 	this._statistics = {
 		cpu: { user:0, nice:0, guest:0, guest_nice:0, system:0, irq: 0, softirq: 0, idle: 0, iowait: 0, steal: 0 },
@@ -193,7 +209,8 @@ var CpuMeter = function() {
 				periods[index] = times[index] - previous_times[index];
 			}
 
-			return usage_calculator(periods);
+            this.usage = usage_calculator(periods);
+			return this.usage;
 		});
 	};
 
@@ -227,7 +244,15 @@ var CpuMeter = function() {
 CpuMeter.prototype = new MeterSubject();
 
 
-var MemoryMeter = function(calculation_method) {
+var MemoryMeter = function(options) {
+    if (options && options.activity_threshold) {
+        this.setActivityThreshold(options.activity_threshold);
+    }
+    if (options && options.calculation_method) {
+        var calculation_method = options.calculation_method;
+    } else {
+        throw 'MemoryMeter expects to get a calculation method.';
+    }
 	this.observers = [];
 	if (-1 == ['ram_only', 'all'].indexOf(calculation_method)) {
 			throw new RangeError('Unknown memory calculation method given: ' + calculation_method);
@@ -299,7 +324,10 @@ var MemoryMeter = function(calculation_method) {
 MemoryMeter.prototype = new MeterSubject();
 
 
-var StorageMeter = function() {
+var StorageMeter = function(options) {
+    if (options && options.activity_threshold) {
+        this.setActivityThreshold(options.activity_threshold);
+    }
 	this.observers = [];
 	let mount_entry_pattern = new RegExp('^\\S+\\s+(\\S+)\\s+(\\S+)');
 	let fs_types_to_measure = [
@@ -356,12 +384,19 @@ var StorageMeter = function() {
 StorageMeter.prototype = new MeterSubject();
 
 
-var NetworkMeter = function(refresh_interval) {
+var NetworkMeter = function(options) {
+    if (options && options.activity_threshold) {
+        this.setActivityThreshold(options.activity_threshold);
+    }
+    if (options && options.refresh_interval) {
+        this._refresh_interval = options.refresh_interval;
+    } else {
+        throw 'NetworkMeter expects to get a refresh interval.';
+    }
 	this.observers = [];
 	this._statistics = {};
 	this._bandwidths = {};
     this._speeds = [];
-    this._refresh_interval = refresh_interval;
 
 	this.loadData = function() {
 		return FactoryModule.AbstractFactory.create('file', this, '/sys/class/net').list().then(files => {
@@ -487,7 +522,10 @@ var NetworkMeter = function(refresh_interval) {
 NetworkMeter.prototype = new MeterSubject();
 
 
-var SwapMeter = function() {
+var SwapMeter = function(options) {
+    if (options && options.activity_threshold) {
+        this.setActivityThreshold(options.activity_threshold);
+    }
 	this.observers = [];
 	let swap_utility = new Util.Swap;
 	let processes = new Util.Processes;
@@ -541,7 +579,10 @@ var SwapMeter = function() {
 SwapMeter.prototype = new MeterSubject();
 
 
-var SystemLoadMeter = function() {
+var SystemLoadMeter = function(options) {
+    if (options && options.activity_threshold) {
+        this.setActivityThreshold(options.activity_threshold);
+    }
 	this.observers = [];
 	this._number_of_cpu_cores = null;
 	let load = new GTop.glibtop_loadavg();

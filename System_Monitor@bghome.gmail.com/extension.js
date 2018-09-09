@@ -33,6 +33,7 @@ const Timer = new Lang.Class({
         }
         if (this._change_event_id) {
             this._settings.disconnect(this._change_event_id);
+            this._change_event_id = null;
         }
     },
 

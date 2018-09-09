@@ -244,6 +244,7 @@ const SystemMonitorPrefsWidget = new GObject.Class({
             { "title": "Horizontal", "value": "horizontal" },
             { "title": "Vertical", "value": "vertical" }
         ], 'string');
+        general_page.add_boolean('Show activity on top bar.', PrefsKeys.SHOW_ACTIVITY);
         general_page.add_boolean('Enable CPU indicator.', PrefsKeys.CPU_METER);
         general_page.add_boolean('Enable memory indicator.', PrefsKeys.MEMORY_METER);
         general_page.add_boolean('Enable disk indicator.', PrefsKeys.STORAGE_METER);
