@@ -254,6 +254,9 @@ var MeterAreaContainer = new Lang.Class({
     Name: "MeterAreaContainer",
     Extends: PopupMenu.PopupBaseMenuItem,
 
+    _init: function() {
+        this.parent({"style_class": "meter-area-container"});
+    },
     addMeter: function(meter, position) {
         if (!meter instanceof MeterContainer) {
             throw new TypeError("First argument of addMeter() method must be instance of MeterContainer.");
