@@ -164,7 +164,7 @@ AbstractFactory.registerObject('meter-area-widget', MeterAreaWidgetFactory);
 
 const MeterWidgetFactory = function() {};
 
-MeterWidgetFactory.prototype.create = function(type, options, icon) {
+MeterWidgetFactory.prototype.create = function(type, icon) {
 	let title, meter_widget;
 	if (type == PrefsKeys.CPU_METER) {
 		title = 'CPU';
@@ -190,7 +190,7 @@ MeterWidgetFactory.prototype.create = function(type, options, icon) {
 
     meter_widget.addTitleItem(new Widget.ResourceTitleItem(title, icon, 'loading...'));
     for (var i = 0; i < 3; i++) {
-        meter_widget.addMenuItem(AbstractFactory.create('meter-widget-item', type, options));
+        meter_widget.addMenuItem(AbstractFactory.create('meter-widget-item', type));
     }
 	return meter_widget;
 }
@@ -200,7 +200,7 @@ AbstractFactory.registerObject('meter-widget', MeterWidgetFactory);
 
 const MeterWidgetItemFactory = function() {};
 
-MeterWidgetItemFactory.prototype.create = function(type, options) {
+MeterWidgetItemFactory.prototype.create = function(type) {
 	switch (type) {
         case PrefsKeys.CPU_METER:
         case PrefsKeys.MEMORY_METER:

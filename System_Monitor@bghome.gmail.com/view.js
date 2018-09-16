@@ -113,7 +113,7 @@ var Menu = new Lang.Class({
         meter.addObserver(icon);
         this._layout.insert_child_at_index(icon, this.available_meters.indexOf(type));
         this._icons[type] = icon;
-        return icon;
+        return FactoryModule.AbstractFactory.create('icon', type, {}, can_show_activity);
     },
     _destroyIcon: function(type) {
         let icon = this._icons[type];
@@ -191,6 +191,8 @@ var Menu = new Lang.Class({
         if (this._meters[type]) {
             this._meters[type].removeObserver(meter_widget);
         }
+        this._widget_area_container.removeMeter(meter_widget);
+        meter_widget.destroy();
         delete this._meter_widgets[type];
     },
     destroy: function() {
