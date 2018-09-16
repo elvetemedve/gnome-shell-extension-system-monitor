@@ -306,16 +306,6 @@ const MeterContainer = new Lang.Class({
     },
     update: function(state) {
         this._label_item.setSummaryText(Math.round(state.percent) + ' %');
-    },
-    destroy: function() {
-        let actors = this.get_children();
-        for (let i = 0; i < actors.length; i++) {
-            let actor = actors[i];
-            this.remove_actor(actor);
-            actor.destroy();
-            actor = null;
-        }
-        this.parent();
     }
 });
 
