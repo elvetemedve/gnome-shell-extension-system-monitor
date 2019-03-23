@@ -42,7 +42,7 @@ const Timer = new Lang.Class({
     }
 });
 
-let timer;
+var timer;
 
 function init() {
     // Register application-specific themed icons.
