@@ -1,13 +1,9 @@
-const Lang = imports.lang;
-const St = imports.gi.St;
-const Clutter = imports.gi.Clutter;
+const { Clutter, GObject, St } = imports.gi;
 
-var Icon = new Lang.Class({
-    Name: 'Icon',
-    Extends: St.Icon,
-
-    _init: function(options, colors, caution_class, can_show_activity) {
-        this.parent(options);
+var Icon = GObject.registerClass(
+class Icon extends St.Icon {
+    _init(options, colors, caution_class, can_show_activity) {
+        super._init(options);
         this.initColorRange(colors);
         this.initCautionClass(caution_class);
         this.initCanShowActivity(can_show_activity);
