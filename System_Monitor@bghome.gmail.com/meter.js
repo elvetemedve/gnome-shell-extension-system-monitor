@@ -1,6 +1,5 @@
 const GTop = imports.gi.GTop;
 const GLib = imports.gi.GLib;
-const Lang = imports.lang;
 
 const Me = imports.misc.extensionUtils.getCurrentExtension();
 const FactoryModule = Me.imports.factory;
@@ -217,13 +216,14 @@ var CpuMeter = function(options) {
 	this.getProcesses = function() {
 		return processes.getIds().then(process_ids => {
 			return new Promise((resolve, reject) => {
-				GLib.idle_add(GLib.PRIORITY_LOW, Lang.bind(this, function(process_ids) {
+				let that = this;
+				GLib.idle_add(GLib.PRIORITY_LOW, function() {
 					try {
 						let process_stats = [];
 						for (let i = 0; i < process_ids.length; i++) {
 							GTop.glibtop_get_proc_time(process_time, process_ids[i]);
-							let previous_rtime = this._statistics.proc[process_ids[i]] || process_time.rtime;
-							this._statistics.proc[process_ids[i]] = process_time.rtime;
+							let previous_rtime = that._statistics.proc[process_ids[i]] || process_time.rtime;
+							that._statistics.proc[process_ids[i]] = process_time.rtime;
 							process_stats.push ({"pid": process_ids[i], "time": process_time.rtime - previous_rtime});
 						}
 						resolve(processes.getTopProcesses(process_stats, "time", 3));
@@ -231,7 +231,7 @@ var CpuMeter = function(options) {
 						reject(e);
 					}
                 	return GLib.SOURCE_REMOVE;
-            	}, process_ids));
+            	});
 			});
 		});
 	};
@@ -286,7 +286,7 @@ var MemoryMeter = function(options) {
 
 		return processes.getIds().then(process_ids => {
 			return new Promise((resolve, reject) => {
-				GLib.idle_add(GLib.PRIORITY_LOW, Lang.bind(this, function(process_ids) {
+				GLib.idle_add(GLib.PRIORITY_LOW, function() {
 					try {
 						let process_stats = [];
 						for (let i = 0; i < process_ids.length; i++) {
@@ -303,7 +303,7 @@ var MemoryMeter = function(options) {
 						reject(e);
 					}
 					return GLib.SOURCE_REMOVE;
-				}, process_ids));
+				});
 			});
 		});
 	};
@@ -353,7 +353,7 @@ var StorageMeter = function(options) {
 	this.getDirectories = function() {
 		return FactoryModule.AbstractFactory.create('file', this, '/proc/mounts').read().then(contents => {
 			return new Promise((resolve, reject) => {
-				GLib.idle_add(GLib.PRIORITY_LOW, Lang.bind(this, function(contents) {
+				GLib.idle_add(GLib.PRIORITY_LOW, function() {
 					try {
 						let mount_list = contents.split("\n").filter(function(mount_entry) {
                             return mount_entry.trim().length > 0;
@@ -375,7 +375,7 @@ var StorageMeter = function(options) {
 						reject(e);
 					}
 					return GLib.SOURCE_REMOVE;
-				}, contents));
+				});
 			});
 		});
 	};

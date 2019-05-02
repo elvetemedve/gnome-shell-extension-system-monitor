@@ -1,16 +1,13 @@
+const { Clutter, GObject, St } = imports.gi;
+
 const PopupMenu = imports.ui.popupMenu;
-const St = imports.gi.St;
-const Lang = imports.lang;
 const Main = imports.ui.main;
 
 const Me = imports.misc.extensionUtils.getCurrentExtension();
 const Util = Me.imports.util;
 
-let BaseMenuItem = new Lang.Class({
-    Name: "BaseMenuItem",
-    Extends: PopupMenu.PopupBaseMenuItem,
-
-    _init: function(text, options) {
+let BaseMenuItem = class extends PopupMenu.PopupBaseMenuItem {
+    constructor(text, options) {
         options = options || {};
         let icon = options.icon, summary_text = options.summary_text, button_icon = options.button_icon, button_callback = options.button_callback,
         button_trigger_key = options.button_trigger_key;
@@ -19,7 +16,8 @@ let BaseMenuItem = new Lang.Class({
         delete options.button_icon;
         delete options.button_callback;
         delete options.button_trigger_key;
-        this.parent(options);
+        super(options);
+        let that = this;
 
         if (icon) {
             this.setIcon(icon);
@@ -28,7 +26,7 @@ let BaseMenuItem = new Lang.Class({
         this.label = new St.Label({text: text, style_class: "item-label"});
         this.labelBin = new St.Bin({child: this.label});
         this.actor.add(this.labelBin);
-        this._change_event_id = this.connect('active-changed', Lang.bind(this, this._activeChanged));
+        this._change_event_id = this.connect('active-changed', this._activeChanged.bind(this));
 
         if (summary_text) {
             this.rightLabel = new St.Label({text: summary_text, style_class: "right-label"});
@@ -38,9 +36,9 @@ let BaseMenuItem = new Lang.Class({
 
         if (button_icon) {
             this.button = new St.Button();
-            this.button._click_event_id = this.button.connect('clicked', Lang.bind(this, function(actor, event) {
-                button_callback.call(this.button, actor, event, this.getState());
-            }));
+            this.button._click_event_id = this.button.connect('clicked', function(actor, event) {
+                button_callback.call(that.button, actor, event, that.getState());
+            });
             this.button_icon = new St.Icon({
                 icon_name: button_icon,
                 icon_size: 14,
@@ -49,9 +47,9 @@ let BaseMenuItem = new Lang.Class({
             this.button.set_child(this.button_icon);
             this.actor.add(this.button, {expand: true, x_fill: false, x_align: St.Align.END});
         }
-    },
+    }
 
-    destroy: function() {
+    destroy() {
         if (this._change_event_id) {
             this.disconnect(this._change_event_id);
             this._change_event_id = null;
@@ -60,24 +58,23 @@ let BaseMenuItem = new Lang.Class({
             this.button.disconnect(this.button._click_event_id);
             this.button._click_event_id = null;
         }
-        this.parent();
-    },
+    }
 
-    _activeChanged: function() {
+    _activeChanged() {
         // Expand ellipsized label.
         this.label.clutter_text.set_line_wrap(this.active);
-    },
+    }
 
-    setLabel: function(text) {
+    setLabel(text) {
         this.label.text = text;
-    },
+    }
 
-    setIcon: function(icon) {
+    setIcon(icon) {
         this.icon = icon;
         this.actor.add(this.icon);
-    },
+    }
 
-    switchToIcon: function(icon) {
+    switchToIcon(icon) {
         let children = this.actor.get_children();
         let position = -1;
         for (let i in children) {
@@ -92,84 +89,69 @@ let BaseMenuItem = new Lang.Class({
             this.icon = icon;
             this.actor.insert_child_at_index(this.icon, position);
         }
-    },
+    }
 
-    hideIcon: function() {
+    hideIcon() {
         this.icon.hide();
-    },
+    }
 
-    showIcon: function() {
+    showIcon() {
         this.icon.show();
-    },
+    }
 
-    setSummaryText: function(text) {
+    setSummaryText(text) {
         this.rightLabel.text = text;
-    },
+    }
 
-    hideButton: function() {
+    hideButton() {
         this.button.hide();
-    },
+    }
 
-    showButton: function() {
+    showButton() {
         this.button.show();
-    },
+    }
 
-    setState: function(state) {
+    setState(state) {
         this._state = state;
-    },
+    }
 
-    getState: function() {
+    getState() {
         return this._state || {};
     }
-});
+};
 
-var ResourceTitleItem = new Lang.Class({
-    Name: "ResourceTitleItem",
-    Extends: BaseMenuItem,
-
-    _init: function(text, icon, summary_text) {
-        this.parent(text, {"icon": icon, "summary_text": summary_text, style_class:"resource-title", "hover": false, "activate": false});
+var ResourceTitleItem = class extends BaseMenuItem {
+    constructor(text, icon, summary_text) {
+        super(text, {"icon": icon, "summary_text": summary_text, style_class:"resource-title", "hover": false, "activate": false});
     }
-});
+};
 
-var ProcessItem = new Lang.Class({
-    Name: "ProcessItem",
-    Extends: BaseMenuItem,
-
-    _init: function(text, button_icon, button_callback, button_trigger_key) {
-        this.parent(text, {"button_icon": button_icon, "button_callback": button_callback, "button_trigger_key": button_trigger_key, "activate": false});
+var ProcessItem = class extends BaseMenuItem {
+    constructor(text, button_icon, button_callback, button_trigger_key) {
+        super(text, {"button_icon": button_icon, "button_callback": button_callback, "button_trigger_key": button_trigger_key, "activate": false});
     }
-});
+};
 
-var MountItem = new Lang.Class({
-    Name: "MountItem",
-    Extends: BaseMenuItem,
-
-    _init: function(text) {
-        this.parent(text, {"activate": false});
+var MountItem = class extends BaseMenuItem {
+    constructor(text) {
+        super(text, {"activate": false});
     }
-});
+};
 
-var StateItem = new Lang.Class({
-    Name: "StateItem",
-    Extends: BaseMenuItem,
-
-    _init: function(text) {
-        this.parent(text, {"activate": false});
+var StateItem = class extends BaseMenuItem {
+    constructor(text) {
+        super(text, {"activate": false});
     }
-});
+};
 
-var InterfaceItem = new Lang.Class({
-    Name: "InterfaceItem",
-    Extends: BaseMenuItem,
-
-    _init: function(text) {
+var InterfaceItem = class extends BaseMenuItem {
+    constructor(text) {
         let icon = new St.Icon({
             icon_name: 'network-wired-no-route-symbolic',
             icon_size: 14,
             style_class: 'system-status-icon'
         });
-        this.parent(text, {"activate": false, "icon": icon});
+        super(text, {"activate": false, "icon": icon});
         this.label.style_class += ' interface-label';
 
         this.download_icon = new St.Icon({
@@ -194,8 +176,8 @@ var InterfaceItem = new Lang.Class({
         this.actor.add(this.download_icon, {expand: true, x_fill: true, x_align: St.Align.END});
         this.actor.add(this.upload_text, {expand: true, x_fill: true, x_align: St.Align.END});
         this.actor.add(this.upload_icon, {expand: true, x_fill: true, x_align: St.Align.END});
-    },
-    switchToLoopBackIcon : function() {
+    }
+    switchToLoopBackIcon() {
         this.switchToIcon(
             new St.Icon({
                 icon_name: 'computer-symbolic',
@@ -203,8 +185,8 @@ var InterfaceItem = new Lang.Class({
                 style_class: 'system-status-icon'
             })
         );
-    },
-    switchToWiredIcon : function() {
+    }
+    switchToWiredIcon() {
         this.switchToIcon(
             new St.Icon({
                 icon_name: 'network-wired-symbolic',
@@ -212,8 +194,8 @@ var InterfaceItem = new Lang.Class({
                 style_class: 'system-status-icon'
             })
         );
-    },
-    switchToWirelessIcon : function() {
+    }
+    switchToWirelessIcon() {
         this.switchToIcon(
             new St.Icon({
                 icon_name: 'network-wireless-symbolic',
@@ -221,8 +203,8 @@ var InterfaceItem = new Lang.Class({
                 style_class: 'system-status-icon'
             })
         );
-    },
-    switchToUnknownIcon : function() {
+    }
+    switchToUnknownIcon() {
         this.switchToIcon(
             new St.Icon({
                 icon_name: 'network-wired-no-route-symbolic',
@@ -230,34 +212,31 @@ var InterfaceItem = new Lang.Class({
                 style_class: 'system-status-icon'
             })
         );
-    },
-    setDownloadText: function(text) {
+    }
+    setDownloadText(text) {
         this.download_text.text = text;
-    },
-    setUploadText: function(text) {
+    }
+    setUploadText(text) {
         this.upload_text.text = text;
-    },
-    hideIcon: function() {
+    }
+    hideIcon() {
         this.icon.hide();
         this.download_icon.hide();
         this.upload_icon.hide();
-    },
+    }
 
-    showIcon: function() {
+    showIcon() {
         this.icon.show();
         this.download_icon.show();
         this.upload_icon.show();
-    },
-});
+    }
+};
 
-var MeterAreaContainer = new Lang.Class({
-    Name: "MeterAreaContainer",
-    Extends: PopupMenu.PopupBaseMenuItem,
-
-    _init: function() {
-        this.parent({"style_class": "meter-area-container"});
-    },
-    addMeter: function(meter, position) {
+var MeterAreaContainer = class extends PopupMenu.PopupBaseMenuItem {
+    constructor() {
+        super({"style_class": "meter-area-container"});
+    }
+    addMeter(meter, position) {
         if (!meter instanceof MeterContainer) {
             throw new TypeError("First argument of addMeter() method must be instance of MeterContainer.");
         }
@@ -266,55 +245,51 @@ var MeterAreaContainer = new Lang.Class({
         } else {
             this.actor.insert_child_at_index(meter, position);
         }
-    },
-    removeMeter: function(meter) {
+    }
+    removeMeter(meter) {
         if (!meter instanceof MeterContainer) {
             throw new TypeError("First argument of removeMeter() method must be instance of MeterContainer.");
         }
         this.actor.remove_actor(meter);
     }
-});
+};
 
-const MeterContainer = new Lang.Class({
-    Name: "MeterContainer",
-    Extends: St.BoxLayout,
-
-    _init: function() {
-        this.parent({"vertical": true});
+const MeterContainer = GObject.registerClass(
+class MeterContainer extends St.BoxLayout {
+    _init() {
+        super._init({"vertical": true});
         this._menu_items = [];
-    },
-    addTitleItem: function(item) {
+    }
+    addTitleItem(item) {
         if (!item instanceof ResourceTitleItem) {
             throw new TypeError("First argument of addTitleItem() method must be instance of ResourceTitleItem.");
         }
         this.add_actor(item.actor);
         this._label_item = item;
-    },
-    addMenuItem: function(item) {
+    }
+    addMenuItem(item) {
         if (!item instanceof BaseMenuItem) {
             throw new TypeError("First argument of addMenuItem() method must be instance of BaseMenuItem.");
         }
         this.add_actor(item.actor);
         this._menu_items.push(item);
-    },
-    removeAllMenuItems: function() {
+    }
+    removeAllMenuItems() {
         for (let item of this._menu_items) {
             this.remove_actor(item.actor);
             item.actor.destroy();
         }
         this._menu_items.length = 0;
-    },
-    update: function(state) {
+    }
+    update(state) {
         this._label_item.setSummaryText(Math.round(state.percent) + ' %');
     }
 });
 
-var ProcessItemsContainer = new Lang.Class({
-    Name: "ProcessItemsContainer",
-    Extends: MeterContainer,
-
-    update: function(state) {
-        this.parent(state);
+var ProcessItemsContainer = GObject.registerClass(
+class ProcessItemsContainer extends MeterContainer {
+    update(state) {
+        super.update(state);
 
         for (let i = 0; i < this._menu_items.length; i++) {
             if (i in state.processes) {
@@ -331,12 +306,10 @@ var ProcessItemsContainer = new Lang.Class({
     }
 });
 
-var SystemLoadItemsContainer = new Lang.Class({
-    Name: "SystemLoadItemsContainer",
-    Extends: MeterContainer,
-
-    update: function(state) {
-        this.parent(state);
+var SystemLoadItemsContainer = GObject.registerClass(
+class SystemLoadItemsContainer extends MeterContainer {
+    update(state) {
+        super.update(state);
 
         let load = state.system_load;
         this._menu_items[0].setLabel(load.load_average_1 + ' / ' + load.load_average_5 + ' / ' + load.load_average_15);
@@ -351,17 +324,15 @@ var SystemLoadItemsContainer = new Lang.Class({
     }
 });
 
-var DirectoriesContainer = new Lang.Class({
-    Name: "DirectoriesContainer",
-    Extends: MeterContainer,
-
-    _init: function() {
-        this.parent();
+var DirectoriesContainer = GObject.registerClass(
+class DirectoriesContainer extends MeterContainer {
+    _init() {
+        super._init();
         this._directories = new Util.Directories();
-    },
+    }
 
-    update: function(state) {
-        this.parent(state);
+    update(state) {
+        super.update(state);
 
         for (let i = 0; i < this._menu_items.length; i++) {
             if (i in state.directories) {
@@ -378,17 +349,15 @@ var DirectoriesContainer = new Lang.Class({
     }
 });
 
-var NetworkInterfaceItemsContainer = new Lang.Class({
-    Name: "NetworkInterfaceItemsContainer",
-    Extends: MeterContainer,
-
-    _init: function() {
-        this.parent();
+var NetworkInterfaceItemsContainer = GObject.registerClass(
+class NetworkInterfaceItemsContainer extends MeterContainer {
+    _init() {
+        super._init();
         this._network = new Util.Network();
-    },
+    }
 
-    update: function(state) {
-        this.parent(state);
+    update(state) {
+        super.update(state);
 
         for (let i = 0; i < this._menu_items.length; i++) {
             if (i in state.interfaces) {

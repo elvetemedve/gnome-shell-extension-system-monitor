@@ -1,36 +1,31 @@
 const Util = imports.misc.util;
 const GTop = imports.gi.GTop;
 const GLib = imports.gi.GLib;
-const Lang = imports.lang;
 
 const Me = imports.misc.extensionUtils.getCurrentExtension();
 const FactoryModule = Me.imports.factory;
 const Promise = Me.imports.helpers.promise.Promise;
 
-var Process = new Lang.Class({
-    Name: "Process",
-
-    _init: function(id) {
+var Process = class {
+    constructor(id) {
         this._id = id;
-    },
+    }
 
-    kill: function() {
+    kill() {
         Util.spawn([ 'bash', '-c', 'kill -s TERM ' + parseInt(this._id) ]);
     }
-});
+};
 
-var Processes = new Lang.Class({
-    Name: "Processes",
-
+var Processes = class {
     /**
      * Get ID list of running processes
      *
      * Update process list asynchronously and return the result of the last update.
      * @return Promise
      */
-    getIds: function() {
+    getIds() {
         return new Promise((resolve, reject) => {
-            GLib.idle_add(GLib.PRIORITY_LOW, Lang.bind(this, function() {
+            GLib.idle_add(GLib.PRIORITY_LOW, function() {
                 try {
                     let proclist = new GTop.glibtop_proclist;
                     let pid_list = GTop.glibtop_get_proclist(proclist, 0, 0);
@@ -45,9 +40,9 @@ var Processes = new Lang.Class({
                     reject(e);
                 }
                 return GLib.SOURCE_REMOVE;
-            }));
+            });
         });
-    },
+    }
 
     /**
      * Get the top processes from the statistics
@@ -57,7 +52,7 @@ var Processes = new Lang.Class({
      * @param integer limit Limit results to the first N items.
      * @return array Items have "pid" and "command" attributes.
      */
-    getTopProcesses: function(process_stats, attribute, limit) {
+    getTopProcesses(process_stats, attribute, limit) {
         process_stats.sort(function(a, b) {
             return (a[attribute] > b[attribute]) ? -1 : (a[attribute] < b[attribute] ? 1 : 0);
         });
@@ -74,11 +69,9 @@ var Processes = new Lang.Class({
         }
         return result;
     }
-});
+};
 
-var Directories = new Lang.Class({
-    Name: "Directories",
-
+var Directories = class {
     /**
      * Get the list of directories using the most space.
      *
@@ -87,7 +80,7 @@ var Directories = new Lang.Class({
      * @param integer limit Limit results of the first N items.
      * @return array Items from directory_stats parameter.
      */
-    getTopDirectories: function(directory_stats, attribute, limit) {
+    getTopDirectories(directory_stats, attribute, limit) {
         directory_stats.sort(function(a, b) {
             return (a[attribute] < b[attribute]) ? 1 : (a[attribute] > b[attribute] ? -1 : 0);
         });
@@ -95,7 +88,7 @@ var Directories = new Lang.Class({
         directory_stats = directory_stats.splice(0, limit);
 
         return directory_stats;
-    },
+    }
 
     /**
      * Format the input bytes to the closet possible size unit.
@@ -104,7 +97,7 @@ var Directories = new Lang.Class({
      * @param int decimals Number of decimals to display. Defaults is 2.
      * @return string
      */
-    formatBytes: function(bytes, decimals) {
+    formatBytes(bytes, decimals) {
         if (bytes == 0) {
             return '0 Byte';
         }
@@ -114,11 +107,9 @@ var Directories = new Lang.Class({
         let i = Math.floor(Math.log(bytes) / Math.log(kilo));
         return parseFloat((bytes / Math.pow(kilo, i)).toFixed(expected_decimals)) + ' ' + sizes[i];
     }
-});
+};
 
-var Network = new Lang.Class({
-    Name: "Network",
-
+var Network = class {
     /**
      * Format the input bytes to the closet possible size unit.
      *
@@ -126,7 +117,7 @@ var Network = new Lang.Class({
      * @param int decimals Number of decimals to display. Defaults is 2.
      * @return string
      */
-    formatBytes: function(bytes, decimals) {
+    formatBytes(bytes, decimals) {
         if (bytes == 0) {
             return '0 B';
         }
@@ -136,15 +127,13 @@ var Network = new Lang.Class({
         let i = Math.floor(Math.log(bytes) / Math.log(kilo));
         return parseFloat((bytes / Math.pow(kilo, i)).toFixed(expected_decimals)) + ' ' + sizes[i];
     }
-});
+};
 
-var Swap = new Lang.Class({
-    Name: "Swap",
-
-    _init: function(id) {
+var Swap = class {
+    constructor(id) {
         this._processes = new Processes;
         this._pattern = new RegExp('^VmSwap:\\s*(\\d+)', 'm');
-    },
+    }
 
     /**
      * Get swap usage information per process
@@ -152,15 +141,16 @@ var Swap = new Lang.Class({
      * Update data asynchronously.
      * @return Promise Keys are process IDs, values are objects like {vm_swap: 1234}
      */
-    getStatisticsPerProcess: function() {
+    getStatisticsPerProcess() {
         return this._processes.getIds().then(process_ids => {
             return new Promise((resolve, reject) => {
-                GLib.idle_add(GLib.PRIORITY_LOW, Lang.bind(this, function(process_ids) {
+                let that = this;
+                GLib.idle_add(GLib.PRIORITY_LOW, function() {
 					try {
                         let promises = [];
                         for (let i = 0; i < process_ids.length; i++) {
                             let pid = process_ids[i];
-                            promises.push(this._getRawStastisticsForProcess(pid));
+                            promises.push(that._getRawStastisticsForProcess(pid));
                         }
 
                         Promise.all(promises).then(rawStatistics => {
@@ -175,12 +165,12 @@ var Swap = new Lang.Class({
                         reject(e);
                     }
                     return GLib.SOURCE_REMOVE;
-                }, process_ids));
+                });
             });
         });
-    },
+    }
 
-    _getRawStastisticsForProcess: function(pid) {
+    _getRawStastisticsForProcess(pid) {
         let pattern = this._pattern;
         return FactoryModule.AbstractFactory.create('file', this, '/proc/' + pid + '/status').read().then(contents => {
             try {
@@ -192,7 +182,7 @@ var Swap = new Lang.Class({
             return { vm_swap: 0 };
         });
     }
-});
+};
 
 let StopWatch = function () {
     this.startTime = 0;

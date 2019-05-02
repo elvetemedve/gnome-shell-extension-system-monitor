@@ -5,7 +5,6 @@ const FileModule = Me.imports.helpers.file;
 const Widget = Me.imports.widget;
 const Util = Me.imports.util;
 
-const Lang = imports.lang;
 const Gio = imports.gi.Gio;
 const PrefsKeys = Me.imports.prefs_keys;
 
@@ -62,8 +61,7 @@ IconFactory.prototype.create = function(type, options, can_show_activity) {
 		track_hover: true
 	}
 
-	let constructor_options = default_options;
-	Lang.copyProperties(options, constructor_options);
+	let constructor_options = Object.assign(default_options, options);
 
 	if (type == PrefsKeys.STORAGE_METER) {
 		constructor_options.icon_name = 'drive-harddisk-symbolic';
@@ -72,9 +70,11 @@ IconFactory.prototype.create = function(type, options, can_show_activity) {
 	} else if (type == PrefsKeys.LOAD_METER) {
 		constructor_options.icon_name = 'computer-symbolic';
 	} else if (type == PrefsKeys.CPU_METER) {
-		constructor_options.gicon = Gio.icon_new_for_string('cpu-symbolic');
+        let path = Me.dir.get_path() + '/icons/hicolor/scalable/devices/cpu-symbolic.svg';
+		constructor_options.gicon = Gio.icon_new_for_string(path);
 	} else if (type == PrefsKeys.MEMORY_METER) {
-		constructor_options.gicon = Gio.icon_new_for_string('memory-symbolic');
+        let path = Me.dir.get_path() + '/icons/hicolor/scalable/devices/memory-symbolic.svg';
+		constructor_options.gicon = Gio.icon_new_for_string(path);
 	} else if (type == PrefsKeys.SWAP_METER) {
 		constructor_options.icon_name = 'media-removable-symbolic';
 	} else {

@@ -1,6 +1,6 @@
-const Lang = imports.lang;
 const GLib = imports.gi.GLib;
 const Gio = imports.gi.Gio;
+const ByteArray = imports.byteArray;
 
 const Me = imports.misc.extensionUtils.getCurrentExtension();
 const Promise = Me.imports.helpers.promise.Promise;
@@ -18,7 +18,7 @@ File.prototype.read = function() {
         try {
             this.file.load_contents_async(null, function(file, res) {
                 try {
-                    let contents = file.load_contents_finish(res)[1].toString();
+                    let contents = ByteArray.toString(file.load_contents_finish(res)[1]);
                     resolve(contents);
                 } catch (e) {
                     reject(e.message);
