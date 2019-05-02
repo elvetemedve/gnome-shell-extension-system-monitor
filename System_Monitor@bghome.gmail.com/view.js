@@ -204,7 +204,7 @@ class Menu extends PanelMenu.Button {
         }
 
         this._removeAllSettingChangedHandlers();
-        this.parent();
+        super.destroy();
     }
     updateUi() {
         let meters = this._meters;
