@@ -6,8 +6,9 @@ const Main = imports.ui.main;
 const Me = imports.misc.extensionUtils.getCurrentExtension();
 const Util = Me.imports.util;
 
-let BaseMenuItem = class extends PopupMenu.PopupBaseMenuItem {
-    constructor(text, options) {
+const BaseMenuItem = GObject.registerClass(
+class BaseMenuItem extends PopupMenu.PopupBaseMenuItem {
+    _init(text, options) {
         options = options || {};
         let icon = options.icon, summary_text = options.summary_text, button_icon = options.button_icon, button_callback = options.button_callback,
         button_trigger_key = options.button_trigger_key;
@@ -16,7 +17,7 @@ let BaseMenuItem = class extends PopupMenu.PopupBaseMenuItem {
         delete options.button_icon;
         delete options.button_callback;
         delete options.button_trigger_key;
-        super(options);
+        super._init(options);
         let that = this;
 
         if (icon) {
@@ -26,7 +27,10 @@ let BaseMenuItem = class extends PopupMenu.PopupBaseMenuItem {
         this.label = new St.Label({text: text, style_class: "item-label"});
         this.labelBin = new St.Bin({child: this.label});
         this.actor.add(this.labelBin);
-        this._change_event_id = this.connect('active-changed', this._activeChanged.bind(this));
+        this._change_event_id = this.connect('notify::active', menuItem => {
+            // Expand ellipsized label.
+            this.label.clutter_text.set_line_wrap(menuItem.active);
+        });
 
         if (summary_text) {
             this.rightLabel = new St.Label({text: summary_text, style_class: "right-label"});
@@ -58,11 +62,6 @@ let BaseMenuItem = class extends PopupMenu.PopupBaseMenuItem {
             this.button.disconnect(this.button._click_event_id);
             this.button._click_event_id = null;
         }
-    }
-
-    _activeChanged() {
-        // Expand ellipsized label.
-        this.label.clutter_text.set_line_wrap(this.active);
     }
 
     setLabel(text) {
@@ -118,40 +117,45 @@ let BaseMenuItem = class extends PopupMenu.PopupBaseMenuItem {
     getState() {
         return this._state || {};
     }
-};
+});
 
-var ResourceTitleItem = class extends BaseMenuItem {
-    constructor(text, icon, summary_text) {
-        super(text, {"icon": icon, "summary_text": summary_text, style_class:"resource-title", "hover": false, "activate": false});
+var ResourceTitleItem = GObject.registerClass(
+class ResourceTitleItem extends BaseMenuItem {
+    _init(text, icon, summary_text) {
+        super._init(text, {"icon": icon, "summary_text": summary_text, style_class:"resource-title", "hover": false, "activate": false});
     }
-};
+});
 
-var ProcessItem = class extends BaseMenuItem {
-    constructor(text, button_icon, button_callback, button_trigger_key) {
-        super(text, {"button_icon": button_icon, "button_callback": button_callback, "button_trigger_key": button_trigger_key, "activate": false});
+var ProcessItem = GObject.registerClass(
+class ProcessItem extends BaseMenuItem {
+    _init(text, button_icon, button_callback, button_trigger_key) {
+        super._init(text, {"button_icon": button_icon, "button_callback": button_callback, "button_trigger_key": button_trigger_key, "activate": false});
     }
-};
+});
 
-var MountItem = class extends BaseMenuItem {
-    constructor(text) {
-        super(text, {"activate": false});
+var MountItem = GObject.registerClass(
+class MountItem extends BaseMenuItem {
+    _init(text) {
+        super._init(text, {"activate": false});
     }
-};
+});
 
-var StateItem = class extends BaseMenuItem {
-    constructor(text) {
-        super(text, {"activate": false});
+var StateItem = GObject.registerClass(
+class StateItem extends BaseMenuItem {
+    _init(text) {
+        super._init(text, {"activate": false});
     }
-};
+});
 
-var InterfaceItem = class extends BaseMenuItem {
-    constructor(text) {
+var InterfaceItem = GObject.registerClass(
+class InterfaceItem extends BaseMenuItem {
+    _init(text) {
         let icon = new St.Icon({
             icon_name: 'network-wired-no-route-symbolic',
             icon_size: 14,
             style_class: 'system-status-icon'
         });
-        super(text, {"activate": false, "icon": icon});
+        super._init(text, {"activate": false, "icon": icon});
         this.label.style_class += ' interface-label';
 
         this.download_icon = new St.Icon({
@@ -230,11 +234,12 @@ var InterfaceItem = class extends BaseMenuItem {
         this.download_icon.show();
         this.upload_icon.show();
     }
-};
+});
 
-var MeterAreaContainer = class extends PopupMenu.PopupBaseMenuItem {
-    constructor() {
-        super({"style_class": "meter-area-container"});
+var MeterAreaContainer = GObject.registerClass(
+class MeterAreaContainer extends PopupMenu.PopupBaseMenuItem {
+    _init() {
+        super._init({"style_class": "meter-area-container"});
     }
     addMeter(meter, position) {
         if (!meter instanceof MeterContainer) {
@@ -252,7 +257,7 @@ var MeterAreaContainer = class extends PopupMenu.PopupBaseMenuItem {
         }
         this.actor.remove_actor(meter);
     }
-};
+});
 
 const MeterContainer = GObject.registerClass(
 class MeterContainer extends St.BoxLayout {

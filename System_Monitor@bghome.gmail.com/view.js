@@ -25,7 +25,7 @@ class Menu extends PanelMenu.Button {
         this._widget_area_container = FactoryModule.AbstractFactory.create('meter-area-widget');
         this._widget_area_container.actor.vertical = this._settings.get_string(PrefsKeys.LAYOUT) === 'vertical';
         this.menu.addMenuItem(this._widget_area_container);
-        this.actor.add_actor(this._layout);
+        this.add_actor(this._layout);
 
         this._initIconsAndWidgets();
         this._addPositionSettingChangedHandler();
