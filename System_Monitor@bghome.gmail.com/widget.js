@@ -33,13 +33,12 @@ class BaseMenuItem extends PopupMenu.PopupBaseMenuItem {
         });
 
         if (summary_text) {
-            this.rightLabel = new St.Label({text: summary_text, style_class: "right-label"});
-            this.rightLabelBin = new St.Bin({child: this.rightLabel});
-            this.actor.add_child(this.rightLabelBin, {expand: true, x_fill: false, x_align: St.Align.END});
+            this.rightLabel = new St.Label({text: summary_text, style_class: "right-label", x_expand: true, x_align: Clutter.ActorAlign.END});
+            this.actor.add_child(this.rightLabel);
         }
 
         if (button_icon) {
-            this.button = new St.Button();
+            this.button = new St.Button({x_expand: true, x_align: Clutter.ActorAlign.END});
             this.button._click_event_id = this.button.connect('clicked', function(actor, event) {
                 button_callback.call(that.button, actor, event, that.getState());
             });
@@ -49,7 +48,7 @@ class BaseMenuItem extends PopupMenu.PopupBaseMenuItem {
                 style_class: 'system-status-icon'
             });
             this.button.set_child(this.button_icon);
-            this.actor.add_child(this.button, {expand: true, x_fill: false, x_align: St.Align.END});
+            this.actor.add_child(this.button);
         }
     }
 
@@ -161,25 +160,33 @@ class InterfaceItem extends BaseMenuItem {
         this.download_icon = new St.Icon({
             icon_name: 'network-receive-symbolic',
             icon_size: 14,
-            style_class: 'system-status-icon'
+            style_class: 'system-status-icon',
+            x_expand: true,
+            x_align:Clutter.ActorAlign.END
         });
         this.upload_icon = new St.Icon({
             icon_name: 'network-transmit-symbolic',
             icon_size: 14,
-            style_class: 'system-status-icon'
+            style_class: 'system-status-icon',
+            x_expand: true,
+            x_align:Clutter.ActorAlign.END
         });
         this.download_text = new St.Label({
             text: 'loading...',
-            style_class: 'bytes-text'
+            style_class: 'bytes-text',
+            x_expand: true,
+            x_align:Clutter.ActorAlign.END
         });
         this.upload_text = new St.Label({
             text: 'loading...',
-            style_class: 'bytes-text'
+            style_class: 'bytes-text',
+            x_expand: true,
+            x_align:Clutter.ActorAlign.END
         });
-        this.actor.add_child(this.download_text, {expand: true, x_fill: true, x_align: St.Align.END});
-        this.actor.add_child(this.download_icon, {expand: true, x_fill: true, x_align: St.Align.END});
-        this.actor.add_child(this.upload_text, {expand: true, x_fill: true, x_align: St.Align.END});
-        this.actor.add_child(this.upload_icon, {expand: true, x_fill: true, x_align: St.Align.END});
+        this.actor.add_child(this.download_text);
+        this.actor.add_child(this.download_icon);
+        this.actor.add_child(this.upload_text);
+        this.actor.add_child(this.upload_icon);
     }
     switchToLoopBackIcon() {
         this.switchToIcon(
