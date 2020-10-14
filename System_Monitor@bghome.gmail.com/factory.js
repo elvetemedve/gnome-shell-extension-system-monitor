@@ -18,7 +18,7 @@ var AbstractFactory = (function() {
             var Class = types[type];
             if (Class) {
             	var factory = new Class();
-            	var args = Array.slice(arguments)
+            	var args = Array.from(arguments)
             	args.shift();
             	return factory.create.apply(factory, args);
 			}
@@ -30,7 +30,7 @@ var AbstractFactory = (function() {
             var Class = types[type];
             if (Class) {
             	var factory = new Class();
-            	var args = Array.slice(arguments)
+            	var args = Array.from(arguments)
             	args.shift();
             	return factory.destroy.apply(factory, args);
 			}

@@ -26,7 +26,7 @@ class BaseMenuItem extends PopupMenu.PopupBaseMenuItem {
 
         this.label = new St.Label({text: text, style_class: "item-label"});
         this.labelBin = new St.Bin({child: this.label});
-        this.actor.add(this.labelBin);
+        this.actor.add_child(this.labelBin);
         this._change_event_id = this.connect('notify::active', menuItem => {
             // Expand ellipsized label.
             this.label.clutter_text.set_line_wrap(menuItem.active);
@@ -35,7 +35,7 @@ class BaseMenuItem extends PopupMenu.PopupBaseMenuItem {
         if (summary_text) {
             this.rightLabel = new St.Label({text: summary_text, style_class: "right-label"});
             this.rightLabelBin = new St.Bin({child: this.rightLabel});
-            this.actor.add(this.rightLabelBin, {expand: true, x_fill: false, x_align: St.Align.END});
+            this.actor.add_child(this.rightLabelBin, {expand: true, x_fill: false, x_align: St.Align.END});
         }
 
         if (button_icon) {
@@ -49,7 +49,7 @@ class BaseMenuItem extends PopupMenu.PopupBaseMenuItem {
                 style_class: 'system-status-icon'
             });
             this.button.set_child(this.button_icon);
-            this.actor.add(this.button, {expand: true, x_fill: false, x_align: St.Align.END});
+            this.actor.add_child(this.button, {expand: true, x_fill: false, x_align: St.Align.END});
         }
     }
 
@@ -70,7 +70,7 @@ class BaseMenuItem extends PopupMenu.PopupBaseMenuItem {
 
     setIcon(icon) {
         this.icon = icon;
-        this.actor.add(this.icon);
+        this.actor.add_child(this.icon);
     }
 
     switchToIcon(icon) {
@@ -176,10 +176,10 @@ class InterfaceItem extends BaseMenuItem {
             text: 'loading...',
             style_class: 'bytes-text'
         });
-        this.actor.add(this.download_text, {expand: true, x_fill: true, x_align: St.Align.END});
-        this.actor.add(this.download_icon, {expand: true, x_fill: true, x_align: St.Align.END});
-        this.actor.add(this.upload_text, {expand: true, x_fill: true, x_align: St.Align.END});
-        this.actor.add(this.upload_icon, {expand: true, x_fill: true, x_align: St.Align.END});
+        this.actor.add_child(this.download_text, {expand: true, x_fill: true, x_align: St.Align.END});
+        this.actor.add_child(this.download_icon, {expand: true, x_fill: true, x_align: St.Align.END});
+        this.actor.add_child(this.upload_text, {expand: true, x_fill: true, x_align: St.Align.END});
+        this.actor.add_child(this.upload_icon, {expand: true, x_fill: true, x_align: St.Align.END});
     }
     switchToLoopBackIcon() {
         this.switchToIcon(
