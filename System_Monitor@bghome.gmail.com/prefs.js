@@ -17,6 +17,7 @@ const PagePrefsGrid = new GObject.Class({
 
     _init: function(params) {
         this.parent(params);
+        this.set_orientation(Gtk.Orientation.VERTICAL);
         this._settings = Convenience.getSettings();
         this.margin = this.row_spacing = this.column_spacing = 10;
         this._rownum = 0;
@@ -52,7 +53,9 @@ const PagePrefsGrid = new GObject.Class({
 
     add_boolean: function(text, key) {
         let item = new Gtk.Switch({
-            active: this._settings.get_boolean(key)
+            active: this._settings.get_boolean(key),
+            halign: Gtk.Align.END,
+            valign: Gtk.Align.END
         });
         this._settings.bind(key, item, 'active', Gio.SettingsBindFlags.DEFAULT);
 
@@ -211,14 +214,14 @@ const SystemMonitorPrefsWidget = new GObject.Class({
             transition_duration: 500
         });
 
-        let stack_switcher = isGtk4 
+        let stack_switcher = isGtk4
             ? new Gtk.StackSwitcher({
                 margin_start: 5,
                 margin_top: 5,
                 margin_bottom: 5,
                 margin_end: 5,
                 stack: stack
-            }) 
+            })
             : new Gtk.StackSwitcher({
                 margin_left: 5,
                 margin_top: 5,
