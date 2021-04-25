@@ -5,6 +5,10 @@ const Params = imports.misc.params;
 const Me = imports.misc.extensionUtils.getCurrentExtension();
 const Convenience = Me.imports.convenience;
 const PrefsKeys = Me.imports.prefs_keys;
+const Config = imports.misc.config;
+const [major] = Config.PACKAGE_VERSION.split(".");
+const shellVersion = Number.parseInt(major);
+const isGtk4 = shellVersion >= 40;
 
 const PagePrefsGrid = new GObject.Class({
     Name: 'Page.Prefs.Grid',
@@ -126,7 +130,11 @@ const PagePrefsGrid = new GObject.Class({
             hexpand: true,
             halign: Gtk.Align.START
         });
-        label.set_line_wrap(wrap || false);
+        if (isGtk4) {
+            label.set_wrap(wrap || false);
+        } else {
+            label.set_line_wrap(wrap || false);
+        }
 
         this.attach(label, 0, this._rownum, 1, 1); // col, row, colspan, rowspan
         this.attach(widget, 1, this._rownum, 1, 1);
@@ -203,18 +211,31 @@ const SystemMonitorPrefsWidget = new GObject.Class({
             transition_duration: 500
         });
 
-        let stack_switcher = new Gtk.StackSwitcher({
-            margin_left: 5,
-            margin_top: 5,
-            margin_bottom: 5,
-            margin_right: 5,
-            stack: stack
-        });
+        let stack_switcher = isGtk4 
+            ? new Gtk.StackSwitcher({
+                margin_start: 5,
+                margin_top: 5,
+                margin_bottom: 5,
+                margin_end: 5,
+                stack: stack
+            }) 
+            : new Gtk.StackSwitcher({
+                margin_left: 5,
+                margin_top: 5,
+                margin_bottom: 5,
+                margin_right: 5,
+                stack: stack
+            });
 
         this._init_stack(stack);
 
-        this.add(stack_switcher);
-        this.add(stack);
+        if (isGtk4) {
+            this.append(stack_switcher);
+            this.append(stack);
+        } else {
+            this.add(stack_switcher);
+            this.add(stack);
+        }
     },
 
     _get_tab_config: function() {
@@ -281,7 +302,10 @@ function init() {
 
 function buildPrefsWidget() {
     let widget = new SystemMonitorPrefsWidget();
-    widget.show_all();
+
+    if (!isGtk4) {
+        widget.show_all();
+    }
 
     return widget;
 }
