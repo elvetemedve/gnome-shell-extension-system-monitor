@@ -264,7 +264,7 @@ var MemoryMeter = function(options) {
 	this.loadData = function() {
 		return FactoryModule.AbstractFactory.create('file', this, '/proc/meminfo').read().then(contents => {
 			let statistics = {};
-			let columns = ['memtotal','memfree','buffers','cached'];
+			let columns = ["memtotal", "memavailable"];
 
 			for (let index in columns) {
 				statistics[columns[index]] = parseInt(contents.match(new RegExp(columns[index] + '.*?(\\d+)', 'i')).pop());
@@ -275,7 +275,7 @@ var MemoryMeter = function(options) {
 
 	this.calculateUsage = function() {
 		return this.loadData().then(stat => {
-			let used = stat.memtotal - stat.memfree - stat.buffers - stat.cached;
+			let used = stat.memtotal - stat.memavailable;
 			this.usage = used / stat.memtotal * 100;
 			return this.usage;
 		});
