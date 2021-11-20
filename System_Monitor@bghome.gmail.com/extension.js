@@ -3,13 +3,13 @@ const { GLib } = imports.gi;
 const Mainloop = imports.mainloop;
 const Me = imports.misc.extensionUtils.getCurrentExtension();
 const View = Me.imports.view;
-const Convenience = Me.imports.convenience;
 const PrefsKeys = Me.imports.prefs_keys;
 
 const Timer = class {
     constructor(params) {
-        this._settings = Convenience.getSettings();
+        this._settings = imports.misc.extensionUtils.getSettings();
         this._view = params.view;
+        imports.misc.extensionUtils.initTranslations();
     }
 
     start(update_interval) {

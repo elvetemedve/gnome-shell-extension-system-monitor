@@ -3,7 +3,6 @@ const Gtk = imports.gi.Gtk;
 const Gio = imports.gi.Gio;
 const Params = imports.misc.params;
 const Me = imports.misc.extensionUtils.getCurrentExtension();
-const Convenience = Me.imports.convenience;
 const PrefsKeys = Me.imports.prefs_keys;
 const Config = imports.misc.config;
 const [major] = Config.PACKAGE_VERSION.split(".");
@@ -18,7 +17,7 @@ const PagePrefsGrid = new GObject.Class({
     _init: function(params) {
         this.parent(params);
         this.set_orientation(Gtk.Orientation.VERTICAL);
-        this._settings = Convenience.getSettings();
+        this._settings = imports.misc.extensionUtils.getSettings();
         this.margin = this.row_spacing = this.column_spacing = 10;
         this._rownum = 0;
     },
@@ -207,7 +206,7 @@ const SystemMonitorPrefsWidget = new GObject.Class({
     _init: function(params) {
         this.parent(params);
         this.set_orientation(Gtk.Orientation.VERTICAL);
-        this._settings = Convenience.getSettings();
+        this._settings = imports.misc.extensionUtils.getSettings();
 
         let stack = new Gtk.Stack({
             transition_type: Gtk.StackTransitionType.SLIDE_LEFT_RIGHT,

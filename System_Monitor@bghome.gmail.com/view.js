@@ -5,7 +5,6 @@ const PanelMenu = imports.ui.panelMenu;
 
 const Me = imports.misc.extensionUtils.getCurrentExtension();
 const FactoryModule = Me.imports.factory;
-const Convenience = Me.imports.convenience;
 const PrefsKeys = Me.imports.prefs_keys;
 
 var Menu = GObject.registerClass(
@@ -19,7 +18,7 @@ class Menu extends PanelMenu.Button {
         this._meter_widgets = {};
         this._event_handler_ids = [];
     	this._layout = new St.BoxLayout();
-        this._settings = Convenience.getSettings();
+        this._settings = imports.misc.extensionUtils.getSettings();
         this._indicator_sort_order = 1;
         this.available_meters = [PrefsKeys.CPU_METER, PrefsKeys.MEMORY_METER, PrefsKeys.STORAGE_METER, PrefsKeys.NETWORK_METER, PrefsKeys.SWAP_METER, PrefsKeys.LOAD_METER];
         this._widget_area_container = FactoryModule.AbstractFactory.create('meter-area-widget');
