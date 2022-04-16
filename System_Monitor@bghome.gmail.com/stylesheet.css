@@ -28,4 +28,5 @@
 .meter-area-container {
     max-width: 1800px;
     max-height: 1000px;
+    background-color: inherit;
 }
