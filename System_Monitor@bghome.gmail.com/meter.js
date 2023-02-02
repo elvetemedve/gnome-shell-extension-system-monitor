@@ -37,7 +37,7 @@ function MeterSubject(options) {
 		return -1;
 	};
 
-	this.notify = function(percent, processes, interfaces, system_load, directories, has_activity) {
+	this.notify = function(percent, processes, interfaces, system_load, directories, gpu, has_activity) {
 		for (let i = 0; i < this.observers.length; i++) {
 			this.observers[i].update(
 				{
@@ -46,6 +46,7 @@ function MeterSubject(options) {
                     interfaces: interfaces,
 					system_load: system_load,
 					directories: directories,
+					gpu: gpu,
 					has_activity: has_activity
 				}
 			);
@@ -68,7 +69,8 @@ MeterSubject.prototype.notifyAll = function() {
 			this.getProcesses(),
             this.getInterfaces(),
 			this.getSystemLoad(),
-			this.getDirectories()
+			this.getDirectories(),
+			this.getGPU()
 		]).then(params => {
             return this.hasActivity().then(activity => {
                 params.push(activity);
@@ -111,6 +113,20 @@ MeterSubject.prototype.getProcesses = function() {
  * { "name": "eth0", "upload": 1234, "download": 4321 }
  */
 MeterSubject.prototype.getInterfaces = function() {
+	return new Promise(resolve => {
+		resolve([]);
+	});
+};
+
+/**
+ * Return GPU related data.
+ *
+ * A GPU[stats] object should look like this:
+ * { name": "GTX 1070", "vendor": "Nvidia", "usage": 0, "mem": 0,"mem_used": 0, "mem_usage": 0, 
+ * "mem_unit": 'GB', "temp": 0, "temp_unit": temp_unit, "power_usage": 0, "power_unit": 'W', 
+ * "mem_clock": 0, "mem_clock_max": 0, "clock": 0, "clock_max": 0, "clock_unit": "Mhz" }
+ */
+MeterSubject.prototype.getGPU = function() {
 	return new Promise(resolve => {
 		resolve([]);
 	});
@@ -644,3 +660,392 @@ var SystemLoadMeter = function(options) {
 };
 
 SystemLoadMeter.prototype = new MeterSubject();
+
+
+
+var GPUMeter = function(options) {
+    if (options && options.activity_threshold) {
+        this.setActivityThreshold(options.activity_threshold);
+    }
+    if (options && options.refresh_interval) {
+        this._refresh_interval = options.refresh_interval;
+    } else {
+        throw 'GPUMeter expects to get a refresh interval.';
+	}
+
+	if (options && options.temp_unit) {
+		this.temp_unit = options.temp_unit;		
+	} else {
+		this.temp_unit = Util.CELSIUS;
+	}
+
+	this.observers = [];
+	this.amd_gpu_loads = [];
+	this.amd_glib_source = null;
+	this._gpu = GPUMeter.createGPU(this.temp_unit);
+
+	if (GPUMeter._gpus === null) {
+		GPUMeter.loadGPUs(this.temp_unit).then(() => this.selectGPU()).catch(e => logError(e));
+	} else {
+		this.selectGPU();
+	}
+
+	// todo: make it possible to switch between primary and secondary GPU 
+	// (need button on widget)
+	this.selectGPU = function () {
+		// For Intel info is intel_gpu_top needed, which requires sudo privileges
+		const unsupported = GPUMeter.is_nvidia_smi ? ["v00008086"] : ["v00008086", "v000010DE"];
+		let supported = [];
+
+		for (gpu of GPUMeter._gpus) {
+			if (gpu.device.boot_vga && !unsupported.includes(gpu.vendor_id)) {
+				this._gpu = gpu;
+				gpu.stats.temp_unit = this.temp_unit; 
+				return;
+			} else if (!unsupported.includes(gpu.vendor_id)) {
+				supported.push(gpu)
+			}
+		}
+
+		if (supported.length) {
+			this._gpu = supported[0];
+			this._gpu.stats.temp_unit = this.temp_unit;
+		}
+	}
+
+	this.loadData = function() {
+		return new Promise(resolve => {
+			let gpu = this._gpu;
+			// Nvidia gpu using PCIe 
+			if (gpu.vendor_id === "v000010DE" && gpu.device.path.startsWith("/sys/class/drm/")) {
+				this.getNvidiaInfo(gpu.device.pcie_id).then(stats => {
+					Object.assign(gpu.stats, stats);
+					resolve(stats.usage);
+				}).catch(e => log(e));
+			// Amd gpu
+			} else if (["v00001022", "v00001002"].includes(gpu.vendor_id)) {
+				this.getAMDInfo(gpu.device).then(stats => {
+					Object.assign(gpu.stats, stats);
+					resolve(stats.usage);
+				}).catch(e => log(e));
+			} else {
+				resolve(0);
+			}
+		});
+	};
+
+	this.calculateUsage = function() {
+		return this.loadData().then(usage => {
+			this.usage = usage;
+			return this.usage;
+		});
+	};
+	
+	this.getGPU = function () {
+		return new Promise(resolve => {
+			let gpu = this._gpu;
+			resolve({name: gpu.name, vendor: gpu.vendor, stats: gpu.stats});
+    	});
+	}
+
+	this.destroy = function () {
+		FactoryModule.AbstractFactory.destroy('file', this);
+
+		if (this.amd_glib_source != null) {
+			this.amd_glib_source.destroy();
+		}
+	};
+
+	this.getNvidiaInfo = function (gpu_id) {
+		const command = "nvidia-smi --query-gpu=memory.total,memory.used,utilization.memory,utilization.gpu,power.draw,clocks.current.memory,clocks.current.graphics,clocks.max.memory,clocks.max.graphics,temperature.gpu --format=csv --id=" + gpu_id;
+		return new Promise((resolve, reject) => {
+			let [res, stdout, stderr] = GLib.spawn_command_line_sync(command);
+			let [keys, data] = new TextDecoder().decode(stdout).split("\n");
+			
+			let parts = data.split(",");
+			let stats = GPUMeter.createStats(this.temp_unit);
+	
+			stats["temp"] = parts.pop().trim();
+			if (this.temp_unit == Util.FAHRENHEIT) {
+				stats["temp"] = Util.toFahrenheit(stats["temp"]);
+			}
+	
+			let [value, unit] = parts.pop().trim().split(" ");
+			stats["clock_max"] = parseInt(value.trim());
+			stats["clock_unit"] = unit.trim();
+	
+			[value, unit] = parts.pop().trim().split(" ");
+			stats["mem_clock_max"] = parseInt(value.trim());
+	
+			[value, unit] = parts.pop().trim().split(" ");
+			stats["clock"] = parseInt(value.trim());
+	
+			[value, unit] = parts.pop().trim().split(" ");
+			stats["mem_clock"] = parseInt(value.trim());
+	
+			[value, unit] = parts.pop().trim().split(" ");
+			stats["power_usage"] = parseFloat(value.trim());
+			stats["power_unit"] = unit.trim();
+	
+			[value, unit] = parts.pop().trim().split(" ");
+			stats["usage"] = parseFloat(value.trim());
+	
+			[value, unit] = parts.pop().trim().split(" ");
+			stats["mem_usage"] = parseFloat(value.trim());
+	
+			[value, unit] = parts.pop().trim().split(" ");
+			stats["mem_used"] = parseFloat(value.trim());
+			stats["mem_unit"] = unit.trim();
+	
+			[value, unit] = parts.pop().trim().split(" ");
+			stats["mem"] = parseFloat(value.trim());
+	
+			for (key of ["mem_used", "mem"]) {
+				stats[key] = Util.MiB2GiB(stats[key], 1);
+			}
+			stats["mem_unit"] = "GiB";
+	
+			resolve(stats);
+		});
+	};
+
+	// This information is calculated for a very small time and directly plotting this data gives spikes.
+	GPUMeter._AMDUsage = function () {
+		try {
+			this.amd_glib_source.destroy();
+		} catch (e) { };
+		this.amd_glib_source = GLib.timeout_source_new(1000 / 365);
+
+		FactoryModule.AbstractFactory.create('file', this._gpu.device.path + "device/gpu_busy_percent").read(data => {
+			this.amd_gpu_loads.push(parseFloat(data.trim()));
+			this.amd_gpu_loads.shift();
+
+			this.amd_glib_source.set_callback(this._AMDUsage);
+			this.amd_glib_source.attatch(GLib.MainContext.default());
+		});
+	}
+
+	GPUMeter.getAMDInfo = function (device) {
+		let stats = GPUMeter.createStats(this.temp_unit);
+		let temp = Promise.resolve();
+		let power = Promise.resolve();
+		let namespace = device.name;
+		let reader = (path) => FactoryModule.AbstractFactory.create('file', namespace, path).read();
+		
+		this._AMDUsage();
+
+		return new Promise(resolve => {
+			if (device.power_sensor) {
+				power = reader(device.power_sensor).then(data => {
+					stats.power_usage = Util.uW2W(parseFloat(data.trim()), 1);
+					stats.power_unit = "W";
+				});
+			}
+	
+			if (device.temp_sensor) {
+				temp = reader(device.temp_sensor).then(data => {
+					stats.temp = Util.mDeg2Deg(parseFloat(data.trim()), 1);
+					if (GPUMeter.temp_unit === Util.FAHRENHEIT) {
+						stats.temp = Util.toFahrenheit(stats.temp);
+					}
+				});
+			}
+			
+			let clock_info = reader(device.path + "device/pp_dpm_sclk").then(result => {
+				let output = result.trim().split("\n");
+	
+				for (line of output) {
+					if (line.includes("*")) {
+						stats.clock = line.split(":")[1].replace(/\*+$|Mhz/, '').trim();
+						stats.clock = parseInt(stats.clock);
+						break;
+					}
+				}
+				stats.clock_max = output.pop().split(":")[1].replace(/Mhz/, '').trim();
+				stats.clock_max = parseInt(stats.clock_max);
+				stats.clock_unit = "Mhz";
+			}).catch(e => log(e));
+	
+			let mem_used = reader(device.path + "device/mem_info_vram_used").then(data => {
+				stats.mem_used = Util.B2GiB(parseInt(data.trim()), 1);
+			}).catch(e => log(e));
+	
+			let mem = reader(device.path + "device/mem_info_vram_total").then(data => {
+				stats.mem = Util.B2GiB(parseInt(data.trim()), 1);
+			}).catch(e => log(e));
+	
+			Promise.all([temp, power, usage, clock_info, mem_used, mem]).then(l => {
+				stats.mem_usage = +(stats.mem_used / stats.mem).toFixed(1);
+				let total = this.amd_gpu_loads.reduce((total, curr) => total + curr, 0);
+				stats.usage = +(total / this.amd_gpu_loads.length).toFixed(1);
+				resolve(stats);
+			});
+		});
+	};
+};
+
+GPUMeter.prototype = new MeterSubject();
+GPUMeter.is_nvidia_smi = false;
+GPUMeter._gpus = null;
+
+GPUMeter.createStats = function (temp_unit) {
+	return {
+		"usage": 0,
+		"mem": 0,
+		"mem_used": 0,
+		"mem_usage": 0,
+		"mem_unit": 'GiB',
+		"temp": 0,
+		"temp_unit": temp_unit,
+		"power_usage": 0,
+		"power_unit": 'W',
+		"mem_clock": 0,
+		"mem_clock_max": 0,
+		"clock": 0,
+		"clock_max": 0,
+		"clock_unit": "Mhz"
+	};
+}
+
+GPUMeter.createGPU = function (temp_unit) {
+	return {
+		"name": "Unknown",
+		"model_id": "",
+		"vendor": "-",
+		"vendor_id": "",
+		"device": {
+			"name": "",
+			"path": "",
+			"file": {
+				"boot_vga": "",
+				"modalias": "",
+				"uevent": ""
+			},
+			"sensors": [],
+			"power_sensor": null,
+			"temp_sensor": null,
+			"pcie_id": "-", 
+			"boot_vga": false,
+		},
+		"stats": GPUMeter.createStats(temp_unit)
+	}
+}
+
+GPUMeter.getAMDSensors = function (gpu, namespace) {
+	return FactoryModule.AbstractFactory.create('file', namespace, gpu.device.path + "device/hwmon/").list();
+}
+
+GPUMeter._getAMDSensorsWithPath = function (sensors, paths, namespace) {
+	return new Promise(resolve => {
+		let promises = [];
+		paths.foreach(path => promises.push(FactoryModule.AbstractFactory.create('file', namespace, path).exists()));
+		Promise.all(promises).then(bools => {
+			resolve(sensors.filter((sensor, i) => bools[i]));
+		});
+	});
+}
+
+GPUMeter._setAMDSensor = function (gpu, sensors, key) {
+	if (sensors.length === 1) {
+		gpu.device[key] = sensors[0];
+	} else if (sensors.length > 1) {
+		log("GPU[" + gpu.name + "]: " + "Multiple " + "s found, selecting one!");
+		gpu.device[key] = sensors[0];
+	}
+}
+
+GPUMeter.setAMDPowerSensor = function (gpu, namespace) {
+	let device = gpu.device;
+	let paths = device.sensors.map(sensor => device.path + "device/hwmon/" + sensor + "power1_input");
+	return new Promise(resolve => {
+		GPUMeter._getAMDSensorsWithPath(device.sensors, paths, namespace).then(sensors => {
+			if (sensors.length) {
+				resolve(GPUMeter._setAMDSensor(gpu, sensors, "power_sensor"));
+			} else {
+				log("GPU[" + gpu.name + "]: " + "No instant power sensors found!");
+				paths = device.sensors.map(sensor => device.path + "device/hwmon/" + sensor + "power1_average");
+				GPUMeter._getAMDSensorsWithPath(device.sensors, paths, namespace).then(sensor => {
+					return GPUMeter.setAMDSensor(gpu, sensors, "power_sensor");
+				});
+			}
+		});
+	});
+}
+
+GPUMeter.setAMDTempSensor = function (gpu, namespace) {
+	let paths = gpu.device.sensors.map(sensor => gpu.device.path + "device/hwmon/" + sensor + "temp1_input");
+	return GPUMeter._getAMDSensorsWithPath(gpu.device.sensors, paths, namespace).then(sensors => {
+		return GPUMeter._setAMDSensor(gpu, sensors);
+	});
+}
+
+GPUMeter.loadGPUs = async function (temp_unit) {
+	let gpus = [];
+	const num_regex = new RegExp("[0-9]+$");
+	const namespace = this;
+
+	let getBootVGA = function (gpu) {
+		return FactoryModule.AbstractFactory.create('file', namespace, gpu.device.file.boot_vga).read()
+			.then(contents => contents.trim() === "1")
+			.catch(e => { 
+				log(e);
+				return false;
+			});
+	};
+
+	let loadInfo = async function (gpu) {
+		id_promise = Util.pcieID(gpu.device.file.uevent, gpu.device.name).catch(e => "-");
+		info = await Util.deviceInfo(gpu.device.file.modalias, namespace, gpu.device.name);
+		
+		info = Util.formatDeviceInfo(info);
+		gpu.name = info.model_name;
+		gpu.model_id = info.model_id;
+		gpu.vendor = info.vendor_name;
+		gpu.vendor_id = info.vendor_id;
+		gpu.device.pcie_id = await id_promise;
+
+		log("GPU: vendor_id: " + info.vendor_id + ", vendor_name: " + info.vendor_name +
+			", model_id: " + info.model_id + ", model_name: " + info.model_name +
+			", pcie_id: " + gpu.device.pcie_id);
+		
+		return gpu;
+	};
+
+	names = await FactoryModule.AbstractFactory.create('file', this, '/sys/class/drm/').list();
+
+	for (fn of names) {
+		if (!fn.includes("-") && fn.replace(num_regex, "") === "card") {
+			let gpu = GPUMeter.createGPU(temp_unit);
+			gpu.device.name = fn;
+			gpu.device.path = "/sys/class/drm/";
+			gpu.device.file.boot_vga = "/sys/class/drm/" + fn + "/device/" + "boot_vga";
+			gpu.device.file.modalias = "/sys/class/drm/" + fn + "/device/" + "modalias";
+			gpu.device.file.uevent = "/sys/class/drm/" + fn + "/device/" + "uevent";
+			gpus.push(gpu);
+		}
+	}
+
+	if (gpus.length == 1) {
+		gpus[0].device.boot_vga = true;
+		await loadInfo(gpus[0]);
+	} else {
+		// Fixme: unable to get promise.all() to work
+		for (let gpu of gpus) {
+			gpu.device.boot_vga = await getBootVGA(gpu);
+			await loadInfo(gpu);
+		}
+	}
+	
+	let amd_gpus = gpus.filter(gpu => ["v00001022", "v00001002"].includes(gpu.vendor_id));
+	for (let gpu of amd_gpus) {
+		gpu.device.sensors = await GPUMeter.getAMDPowerSensors(gpu, namespace);
+		await GPUMeter.setAMDPowerSensor(gpu, namespace);
+		await GPUMeter.setAMDTempSensor(gpu, namespace);
+	}
+
+	GPUMeter.is_nvidia_smi = await FactoryModule.AbstractFactory.create('file', namespace, "/usr/bin/nvidia-smi").exists();
+	FactoryModule.AbstractFactory.destroy('file', namespace);
+
+	GPUMeter._gpus = gpus;
+	log("GPUs loaded!");
+};

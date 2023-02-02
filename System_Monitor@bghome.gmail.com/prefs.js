@@ -249,6 +249,10 @@ const SystemMonitorPrefsWidget = new GObject.Class({
             {
                 name: 'Memory',
                 page: this._createMemoryPage()
+            },
+            {
+                name: "GPU",
+                page: this._createGPUPage()
             }
         ];
 
@@ -278,6 +282,7 @@ const SystemMonitorPrefsWidget = new GObject.Class({
         general_page.add_boolean('Enable network indicator.', PrefsKeys.NETWORK_METER);
         general_page.add_boolean('Enable swap indicator.', PrefsKeys.SWAP_METER);
         general_page.add_boolean('Enable system load indicator.', PrefsKeys.LOAD_METER);
+        general_page.add_boolean('Enable GPU indicator', PrefsKeys.GPU_METER);
         return general_page;
     },
 
@@ -288,6 +293,16 @@ const SystemMonitorPrefsWidget = new GObject.Class({
             { "title": "All memory", "value": "all" }
         ], 'string');
         return memory_page;
+    },
+
+    _createGPUPage: function () {
+        let gpu_page = new PagePrefsGrid();
+        gpu_page.add_combo('Select temperature format.', PrefsKeys.TEMPRATURE_UNIT, [
+            { "title": "Celsius", "value": 'C' },
+            { "title": "Fahrenheit", "value": 'F' }
+        ], 'string');
+        
+        return gpu_page;
     },
 
     _init_stack: function(stack) {

@@ -400,3 +400,77 @@ class NetworkInterfaceItemsContainer extends MeterContainer {
         }
     }
 });
+
+
+
+var GPUItemsContainer = GObject.registerClass(
+    class GPUItemsContainer extends MeterContainer {
+        _init() {
+            super._init();
+        }
+
+        setTitle(text) {
+            this._label_item.setLabel(text);
+        }
+
+        addMenuItem(item) {
+            super.addMenuItem(item);
+
+            switch (this._menu_items.length) {
+                case 1:
+                    this._menu_items[0].setLabel("VRAM: ");
+                    break;
+                case 2:
+                    this._menu_items[1].setLabel("Temperature: ");
+                    break;
+                case 3:
+                    this._menu_items[2].setLabel("Power draw: ");
+                    break;
+            }
+        }
+    
+        update(state) {
+            super.update(state);
+
+            let gpu = state.gpu;
+            this.setTitle(gpu.name);
+            gpu = gpu.stats;
+
+            let labels = ["VRAM:  ", "Core:  ", "Temp:  "];
+            let values = [
+                gpu.mem_usage + ' %',
+                gpu.clock + ' ' + gpu.clock_unit,
+                gpu.temp + ' ' + gpu.temp_unit
+            ];
+            let max = labels.reduce((a, b) => (b.length - a.length) ? a : b);
+
+            for (let i = 0; i < 3; i++) {
+                let label = labels[i]; 
+                this._menu_items[i].setLabel(label + " ".repeat(max - label) + values[i]);
+            }
+
+            labels = ["  ", "MEM:  ", "Power:  "];
+            values = [
+                gpu.mem_used + ' ' + gpu.mem_unit + ' / ' + gpu.mem + ' ' + gpu.mem_unit,
+                gpu.mem_clock + ' ' + gpu.clock_unit,
+                gpu.power_usage + ' ' + gpu.power_unit
+            ];
+            max = labels.reduce((a, b) => (b.length - a.length) ? a : b);
+
+            for (let i = 0; i < 3; i++) {
+                let label = labels[i]; 
+                this._menu_items[i].setSummaryText(label + " ".repeat(max - label) + values[i]);
+            }
+        }
+    });
+
+var GPUItem = GObject.registerClass(
+    class GPUItem extends BaseMenuItem {
+        _init(text) {
+            super._init(text, {"activate": false, "summary_text": 'Loading ...'});
+            this.label.style_class += ' GPUItem-label';
+        }
+        setSummaryText(text) {
+            super.setSummaryText(text);
+        }
+    });

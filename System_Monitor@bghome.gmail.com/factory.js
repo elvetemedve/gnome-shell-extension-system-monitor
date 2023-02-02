@@ -77,6 +77,9 @@ IconFactory.prototype.create = function(type, options, can_show_activity) {
 		constructor_options.gicon = Gio.icon_new_for_string(path);
 	} else if (type == PrefsKeys.SWAP_METER) {
 		constructor_options.icon_name = 'media-removable-symbolic';
+	} else if (type == PrefsKeys.GPU_METER) {
+		let path = Me.dir.get_path() + '/icons/hicolor/scalable/devices/cpu-symbolic.svg';
+		constructor_options.gicon = Gio.icon_new_for_string(path);
 	} else {
 		throw new RangeError('Unknown indicator type "' + type + '" given.');
 	}
@@ -110,6 +113,8 @@ MeterFactory.prototype.create = function(type, options) {
 		class_name = MeterModule.SwapMeter;
 	} else if (type == PrefsKeys.LOAD_METER) {
 		class_name = MeterModule.SystemLoadMeter;
+	} else if (type == PrefsKeys.GPU_METER) {
+		class_name = MeterModule.GPUMeter;
 	} else {
 		throw new RangeError('Unknown meter type "' + type + '" given.');
 	}
@@ -184,6 +189,9 @@ MeterWidgetFactory.prototype.create = function(type, icon) {
 	} else if (type == PrefsKeys.LOAD_METER) {
 		title = 'System load';
         meter_widget = new Widget.SystemLoadItemsContainer();
+	} else if (type == PrefsKeys.GPU_METER) {
+		title = 'GPU';
+		meter_widget = new Widget.GPUItemsContainer(); 
 	} else {
 		throw new RangeError('Unknown meter type "' + type + '" given.');
 	}
@@ -217,7 +225,10 @@ MeterWidgetItemFactory.prototype.create = function(type) {
             return new Widget.MountItem('loading...');
 
         case PrefsKeys.LOAD_METER:
-            return new Widget.StateItem('loading...');
+			return new Widget.StateItem('loading...');
+		
+		case PrefsKeys.GPU_METER:
+			return new Widget.GPUItem('loading...');
 
         default:
             throw new RangeError('Unknown meter type "' + type + '" given.');

@@ -222,3 +222,135 @@ StopWatch.prototype.printElapsed = function (name) {
 
     window.log(currentName + '[' + this.getElapsedMilliseconds() + 'ms]' + '[' + this.getElapsedSeconds() + 's]');
 };
+
+
+
+var CELSIUS = String.fromCodePoint('℃'.codePointAt(0));
+var FAHRENHEIT = String.fromCharCode(0x2109);
+
+var toFahrenheit = (celcius, decimals) => +(1.8 * celcius + 32).toFixed(decimals);
+var MiB2GB = (value, decimals) => +(value * 0.001048576).toFixed(decimals);
+var MiB2GiB = (value, decimals) => +(value / 1024).toFixed(decimals);
+var B2GiB = (value, decimals) => +(value / 1073741824).toFixed(decimals);
+var uW2W = (value, decimals) => +(value / 1000000).toFixed(decimals);
+var mDeg2Deg = (value, decimals) => +(value / 1000).toFixed(decimals);
+
+
+var formatDeviceInfo = function (info) {
+    let res = {};
+    try {
+        Object.assign(res, info);
+        res.vendor_name = res.vendor_name.replace("Corporation", "").trim();
+        let model_name = res.model_name.match(/\[(.+?)\]/)[1];
+        let vendor = res.vendor_name.toLowerCase().trim();
+
+        if (vendor === "nvidia") {
+            res.vendor_name = "Nvidia";
+            is_mobile = model_name.includes("Mobile");
+            is_max_x = model_name.includes("Max");
+
+            if (is_mobile && is_max_x) {
+                regex = /GeForce|Mobile|\s\/\s/g;  // /GeForce|Mobile|Max([^\s]+)|\//g
+            } else {
+                regex = /GeForce/;
+            }
+
+            model_name = model_name.replace(regex, "").trim();
+        } else if (vendor === "Intel") {
+            res.vendor_name = "Intel";
+        } else if (vendor === "amd") {
+            res.vendor_name = "AMD";
+        }
+
+        res.model_name = model_name;
+    } catch (e) {
+        logError(e);
+    }
+    return res
+}
+
+var pcieID = async function (uevent_path, namespace) {
+    
+    uevent_output = await FactoryModule.AbstractFactory.create('file', namespace, uevent_path).read()
+        .then(content => content.trim().split("\n"))
+        .catch(e => "");
+    
+    FactoryModule.AbstractFactory.destroy('file', namespace);
+
+    for (let line of uevent_output) {
+        if (line.startsWith("PCI_SLOT_NAME=")) {
+            return line.split("=").pop();
+        }
+    }
+    return "-";
+}
+
+
+var deviceInfo = async function (modalias_path, namespace, temp_namespace) {
+    let result = { vendor_name: "Unknown", vendor_id: "-", model_name: "Unknown", model_id: "-" };
+    let pci_usb_hardware_database_dir = "/usr/share/hwdata/";
+    let udev_hardware_database_dir = null;
+
+    try {   
+        modalias_output = await FactoryModule.AbstractFactory.create('file', temp_namespace, modalias_path).read();
+        FactoryModule.AbstractFactory.destroy('file', temp_namespace);
+
+        //Define hardware database file directories for "udev" if "hwdata" is not installed.
+        let is_hwdata_dir = await FactoryModule.AbstractFactory.create('file', namespace, pci_usb_hardware_database_dir).exists();
+
+        if (!is_hwdata_dir) {
+            pci_usb_hardware_database_dir = null;
+
+            //Define "udev" hardware database file directory.
+            udev_hardware_database_dir = "/usr/lib/udev/hwdb.d/";
+            
+            //Some older Linux distributions use "/lib/" instead of "/usr/lib/" but they are merged under "/usr/lib/" in newer versions.
+            let is_udev_dir = await FactoryModule.AbstractFactory.create('file', namespace, udev_hardware_database_dir).exists();
+
+            if (!is_udev_dir) {
+                udev_hardware_database_dir = "/lib/udev/hwdb.d/";
+            }
+        }
+
+        let [device_subtype, device_alias] = modalias_output.split(":");
+        log("DeviceInfo: subtype: " + device_subtype + ", alias: " + device_alias);
+
+        //Get device vendor, model if device subtype is PCI.
+        if (device_subtype == "pci") {
+            // Get device IDs from modalias file content.
+            let first_index = device_alias.search("v");
+            let last_index = first_index + 8 + 1;
+            result.vendor_id = device_alias.slice(first_index, last_index);
+            
+            first_index = device_alias.search("d");
+            last_index = first_index + 8 + 1;
+            result.model_id = device_alias.slice(first_index, last_index);
+
+            let search_text1;
+            let search_text2;
+            let ids_file_output;
+
+            if (udev_hardware_database_dir === null) {
+                search_text1 = "\n" + result.vendor_id.slice(5).toLowerCase() + "  ";
+                search_text2 = "\n\t" + result.model_id.slice(5).toLowerCase() + "  ";
+                ids_file_output = await FactoryModule.AbstractFactory.create("file", namespace, pci_usb_hardware_database_dir + "pci.ids").read();
+            } else {
+                search_text1 = "pci:" + result.vendor_id + "*" + "\n ID_VENDOR_FROM_DATABASE="
+                search_text2 = "pci:" + result.vendor_id + result.model_id + "*" + "\n ID_MODEL_FROM_DATABASE=";
+                ids_file_output = await FactoryModule.AbstractFactory.create('file', namespace, udev_hardware_database_dir + "20-pci-vendor-model.hwdb").read();
+            }
+
+            if (ids_file_output.includes(search_text1)) {
+                let narrowed_output = ids_file_output.split(search_text1)[1];
+                result.vendor_name = narrowed_output.split("\n")[0];
+
+                if (narrowed_output.includes(search_text2)) {
+                    result.model_name = narrowed_output.split(search_text2)[1].split("\n")[0];
+                }
+            }
+        }
+    } catch (e) {
+        log(e);
+    }
+    return result; 
+}

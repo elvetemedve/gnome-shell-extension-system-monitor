@@ -36,6 +36,11 @@
         <summary>Enable system load indicator.</summary>
         <description>Turn on or off the system load indicator.</description>
     </key>
+    <key type="b" name="gpu-meter">
+        <default>false</default>
+        <summary>Enable gpu indicator.</summary>
+        <description>Turn on or off the GPU indicator.</description>
+    </key>
     <key type="s" name="position">
         <default>"center"</default>
         <summary>Position on top bar.</summary>
@@ -55,6 +60,11 @@
         <default>true</default>
         <summary>Show activity on top bar.</summary>
         <description>When the indicator value raised above the given treshold, then the indicator icon gets a circle transparent background until the next refresh.</description>
+    </key>
+    <key type="s" name="temperature-unit-symbol">
+        <default>"C"</default>
+        <summary>Selected temperature unit</summary>
+        <description>Controls which temperature unit to use</description>
     </key>
   </schema>
 </schemalist>

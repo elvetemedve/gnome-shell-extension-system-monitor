@@ -4,6 +4,7 @@ const Panel = imports.ui.main.panel;
 const PanelMenu = imports.ui.panelMenu;
 
 const Me = imports.misc.extensionUtils.getCurrentExtension();
+const Util = Me.imports.util;
 const FactoryModule = Me.imports.factory;
 const PrefsKeys = Me.imports.prefs_keys;
 
@@ -20,7 +21,7 @@ class Menu extends PanelMenu.Button {
     	this._layout = new St.BoxLayout();
         this._settings = imports.misc.extensionUtils.getSettings();
         this._indicator_sort_order = 1;
-        this.available_meters = [PrefsKeys.CPU_METER, PrefsKeys.MEMORY_METER, PrefsKeys.STORAGE_METER, PrefsKeys.NETWORK_METER, PrefsKeys.SWAP_METER, PrefsKeys.LOAD_METER];
+        this.available_meters = [PrefsKeys.CPU_METER, PrefsKeys.MEMORY_METER, PrefsKeys.STORAGE_METER, PrefsKeys.NETWORK_METER, PrefsKeys.SWAP_METER, PrefsKeys.LOAD_METER, PrefsKeys.GPU_METER];
         this._widget_area_container = FactoryModule.AbstractFactory.create('meter-area-widget');
         this._widget_area_container.actor.vertical = this._settings.get_string(PrefsKeys.LAYOUT) === 'vertical';
         this.menu.addMenuItem(this._widget_area_container);
@@ -31,6 +32,7 @@ class Menu extends PanelMenu.Button {
         this._addLayoutSettingChangedHandler();
         this._addMemoryCalculationSettingChangedHandler();
         this._addShowActivitySettingChangedHandler();
+        this._addGPUTempUnitChangeHandler();
         this._addIndicatorToTopBar(this._settings.get_string(PrefsKeys.POSITION));
     }
     _initIconsAndWidgets() {
@@ -98,6 +100,15 @@ class Menu extends PanelMenu.Button {
                         activity_threshold: 10
                     });
                     break;
+                case PrefsKeys.GPU_METER:
+                    var temp_unit = (this._settings.get_string(PrefsKeys.TEMPRATURE_UNIT) === 'C') ? Util.CELSIUS : Util.FAHRENHEIT;
+                    
+                    meter = FactoryModule.AbstractFactory.create('meter', type, {
+                        refresh_interval: this._settings.get_int(PrefsKeys.REFRESH_INTERVAL),
+                        temp_unit: temp_unit,
+                        activity_threshold: 10
+                    });
+                    break;
                 default:
                     meter = FactoryModule.AbstractFactory.create('meter', type);
             }
@@ -151,6 +162,20 @@ class Menu extends PanelMenu.Button {
         let event_id = this._settings.connect('changed::' + PrefsKeys.MEMORY_CALCULATION_METHOD, function(settings, key) {
             // Reload the memory meter if it's enabled.
             let type = PrefsKeys.MEMORY_METER;
+            if (settings.get_boolean(type)) {
+                that._destroyIcon(type);
+                that._destroyMeterWidget(type);
+                let icon = that._createIcon(type);
+                that._createMeterWidget(type, icon);
+            }
+        });
+        this._event_handler_ids.push(event_id);
+    }
+    _addGPUTempUnitChangeHandler() {
+        let that = this;
+        let event_id = this._settings.connect('changed::' + PrefsKeys.TEMPRATURE_UNIT, function (settings, key) {
+            let type = PrefsKeys.GPU_METER;
+
             if (settings.get_boolean(type)) {
                 that._destroyIcon(type);
                 that._destroyMeterWidget(type);

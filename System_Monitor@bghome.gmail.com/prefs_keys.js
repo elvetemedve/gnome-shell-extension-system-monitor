@@ -9,3 +9,5 @@ var POSITION = 'position';
 var LAYOUT = 'layout';
 var MEMORY_CALCULATION_METHOD = 'memory-calculation-method';
 var SHOW_ACTIVITY = 'show-activity';
+var GPU_METER = 'gpu-meter';
+var TEMPRATURE_UNIT = 'temperature-unit-symbol';
