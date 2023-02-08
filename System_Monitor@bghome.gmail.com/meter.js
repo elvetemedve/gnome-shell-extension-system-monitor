@@ -698,7 +698,7 @@ var GPUMeter = function(options) {
 		let supported = [];
 
 		for (gpu of GPUMeter._gpus) {
-			if (gpu.device.boot_vga && !unsupported.includes(gpu.vendor_id)) {
+			if (gpu.device.is_boot_vga && !unsupported.includes(gpu.vendor_id)) {
 				this._gpu = gpu;
 				gpu.stats.temp_unit = this.temp_unit; 
 				return;
@@ -757,7 +757,7 @@ var GPUMeter = function(options) {
 	};
 
 	this.getNvidiaInfo = function (gpu_id) {
-		const command = "nvidia-smi --query-gpu=memory.total,memory.used,utilization.memory,utilization.gpu,power.draw,clocks.current.memory,clocks.current.graphics,clocks.max.memory,clocks.max.graphics,temperature.gpu --format=csv --id=" + gpu_id;
+		const command = "nvidia-smi --query-gpu=memory.total,memory.used,utilization.memory,utilization.gpu,power.draw,power.limit,clocks.current.memory,clocks.current.graphics,clocks.max.memory,clocks.max.graphics,temperature.gpu --format=csv --id=" + gpu_id;
 		return new Promise((resolve, reject) => {
 			let [res, stdout, stderr] = GLib.spawn_command_line_sync(command);
 			let [keys, data] = new TextDecoder().decode(stdout).split("\n");
@@ -782,10 +782,13 @@ var GPUMeter = function(options) {
 	
 			[value, unit] = parts.pop().trim().split(" ");
 			stats["mem_clock"] = parseInt(value.trim());
+
+			[value, unit] = parts.pop().trim().split(" ");
+			stats["power_limit"] = parseInt(value.trim());
+			stats["power_unit"] = unit.trim();
 	
 			[value, unit] = parts.pop().trim().split(" ");
 			stats["power_usage"] = parseFloat(value.trim());
-			stats["power_unit"] = unit.trim();
 	
 			[value, unit] = parts.pop().trim().split(" ");
 			stats["usage"] = parseFloat(value.trim());
@@ -898,6 +901,7 @@ GPUMeter.createStats = function (temp_unit) {
 		"temp": 0,
 		"temp_unit": temp_unit,
 		"power_usage": 0,
+		"power_limit": 0,
 		"power_unit": 'W',
 		"mem_clock": 0,
 		"mem_clock_max": 0,
@@ -916,16 +920,14 @@ GPUMeter.createGPU = function (temp_unit) {
 		"device": {
 			"name": "",
 			"path": "",
-			"file": {
-				"boot_vga": "",
-				"modalias": "",
-				"uevent": ""
-			},
+			"boot_vga": "",
+			"modalias": "",
+			"uevent": "",
 			"sensors": [],
 			"power_sensor": null,
 			"temp_sensor": null,
 			"pcie_id": "-", 
-			"boot_vga": false,
+			"is_boot_vga": false,
 		},
 		"stats": GPUMeter.createStats(temp_unit)
 	}
@@ -985,7 +987,7 @@ GPUMeter.loadGPUs = async function (temp_unit) {
 	const namespace = this;
 
 	let getBootVGA = function (gpu) {
-		return FactoryModule.AbstractFactory.create('file', namespace, gpu.device.file.boot_vga).read()
+		return FactoryModule.AbstractFactory.create('file', namespace, gpu.device.boot_vga).read()
 			.then(contents => contents.trim() === "1")
 			.catch(e => { 
 				log(e);
@@ -994,8 +996,8 @@ GPUMeter.loadGPUs = async function (temp_unit) {
 	};
 
 	let loadInfo = async function (gpu) {
-		id_promise = Util.pcieID(gpu.device.file.uevent, gpu.device.name).catch(e => "-");
-		info = await Util.deviceInfo(gpu.device.file.modalias, namespace, gpu.device.name);
+		id_promise = Util.pcieID(gpu.device.uevent, gpu.device.name).catch(e => "-");
+		info = await Util.deviceInfo(gpu.device.modalias, namespace, gpu.device.name);
 		
 		info = Util.formatDeviceInfo(info);
 		gpu.name = info.model_name;
@@ -1018,20 +1020,20 @@ GPUMeter.loadGPUs = async function (temp_unit) {
 			let gpu = GPUMeter.createGPU(temp_unit);
 			gpu.device.name = fn;
 			gpu.device.path = "/sys/class/drm/";
-			gpu.device.file.boot_vga = "/sys/class/drm/" + fn + "/device/" + "boot_vga";
-			gpu.device.file.modalias = "/sys/class/drm/" + fn + "/device/" + "modalias";
-			gpu.device.file.uevent = "/sys/class/drm/" + fn + "/device/" + "uevent";
+			gpu.device.boot_vga = "/sys/class/drm/" + fn + "/device/" + "boot_vga";
+			gpu.device.modalias = "/sys/class/drm/" + fn + "/device/" + "modalias";
+			gpu.device.uevent = "/sys/class/drm/" + fn + "/device/" + "uevent";
 			gpus.push(gpu);
 		}
 	}
 
 	if (gpus.length == 1) {
-		gpus[0].device.boot_vga = true;
+		gpus[0].device.is_boot_vga = true;
 		await loadInfo(gpus[0]);
 	} else {
 		// Fixme: unable to get promise.all() to work
 		for (let gpu of gpus) {
-			gpu.device.boot_vga = await getBootVGA(gpu);
+			gpu.device.is_boot_vga = await getBootVGA(gpu);
 			await loadInfo(gpu);
 		}
 	}

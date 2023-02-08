@@ -78,7 +78,7 @@ IconFactory.prototype.create = function(type, options, can_show_activity) {
 	} else if (type == PrefsKeys.SWAP_METER) {
 		constructor_options.icon_name = 'media-removable-symbolic';
 	} else if (type == PrefsKeys.GPU_METER) {
-		let path = Me.dir.get_path() + '/icons/hicolor/scalable/devices/cpu-symbolic.svg';
+		let path = Me.dir.get_path() + '/icons/hicolor/scalable/devices/gpu-symbolic.svg';
 		constructor_options.gicon = Gio.icon_new_for_string(path);
 	} else {
 		throw new RangeError('Unknown indicator type "' + type + '" given.');

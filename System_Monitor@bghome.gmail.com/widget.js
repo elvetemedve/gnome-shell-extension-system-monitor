@@ -5,6 +5,8 @@ const Main = imports.ui.main;
 
 const Me = imports.misc.extensionUtils.getCurrentExtension();
 const Util = Me.imports.util;
+const Gio = imports.gi.Gio;
+const IndicatorModule = Me.imports.indicator;
 
 const BaseMenuItem = GObject.registerClass(
 class BaseMenuItem extends PopupMenu.PopupBaseMenuItem {
@@ -415,16 +417,18 @@ var GPUItemsContainer = GObject.registerClass(
 
         addMenuItem(item) {
             super.addMenuItem(item);
-
             switch (this._menu_items.length) {
                 case 1:
-                    this._menu_items[0].setLabel("VRAM: ");
+                    this._menu_items[0].setLeftIcon('memory');
+                    this._menu_items[0].setRightIcon('remove');
                     break;
                 case 2:
-                    this._menu_items[1].setLabel("Temperature: ");
+                    this._menu_items[1].setLeftIcon('clock');
+                    this._menu_items[1].setRightIcon('memory_clock')
                     break;
                 case 3:
-                    this._menu_items[2].setLabel("Power draw: ");
+                    this._menu_items[2].setLeftIcon('temp');
+                    this._menu_items[2].setRightIcon('power');
                     break;
             }
         }
@@ -436,41 +440,130 @@ var GPUItemsContainer = GObject.registerClass(
             this.setTitle(gpu.name);
             gpu = gpu.stats;
 
-            let labels = ["VRAM:  ", "Core:  ", "Temp:  "];
-            let values = [
-                gpu.mem_usage + ' %',
+            let leftValues = [
+                ' '.repeat(2) + gpu.mem_usage + ' %',
                 gpu.clock + ' ' + gpu.clock_unit,
                 gpu.temp + ' ' + gpu.temp_unit
             ];
-            let max = labels.reduce((a, b) => (b.length - a.length) ? a : b);
 
-            for (let i = 0; i < 3; i++) {
-                let label = labels[i]; 
-                this._menu_items[i].setLabel(label + " ".repeat(max - label) + values[i]);
-            }
-
-            labels = ["  ", "MEM:  ", "Power:  "];
-            values = [
+            let rightvalues = [
                 gpu.mem_used + ' ' + gpu.mem_unit + ' / ' + gpu.mem + ' ' + gpu.mem_unit,
                 gpu.mem_clock + ' ' + gpu.clock_unit,
                 gpu.power_usage + ' ' + gpu.power_unit
             ];
-            max = labels.reduce((a, b) => (b.length - a.length) ? a : b);
 
             for (let i = 0; i < 3; i++) {
-                let label = labels[i]; 
-                this._menu_items[i].setSummaryText(label + " ".repeat(max - label) + values[i]);
+                this._menu_items[i].setLeftLabel(leftValues[i]);
+                this._menu_items[i].setRightLabel(rightvalues[i]);
             }
         }
     });
 
 var GPUItem = GObject.registerClass(
     class GPUItem extends BaseMenuItem {
+
+        static caution_class = 'indicator-caution';
+        static range = [
+            { red:190, green: 190, blue: 190 },
+            { red:255, green: 204, blue: 0 },
+            { red:255, green: 0, blue: 0 }
+        ];
+        
         _init(text) {
-            super._init(text, {"activate": false, "summary_text": 'Loading ...'});
+            super._init(text, {"activate": false, icon: this._getIcon()});
             this.label.style_class += ' GPUItem-label';
+
+            this.rightIcon = this._getIcon();
+            this.rightLabel = new St.Label({ text: '...', style_class: "right-label", x_expand: true, x_align: Clutter.ActorAlign.START });
+            this.actor.add_child(this.rightIcon);
+            this.actor.add_child(this.rightLabel);
         }
-        setSummaryText(text) {
-            super.setSummaryText(text);
+
+        _getIcon(type) {
+            let options = {
+                style_class: 'system-status-icon system-monitor-icon',
+                reactive: true,
+                can_focus: true,
+                track_hover: true,
+                icon_size: 16,
+            };
+
+            var path = "";
+
+            switch (type) {
+                case 'memory':
+                    path = Me.dir.get_path() + '/icons/hicolor/scalable/devices/memory-symbolic.svg';
+                    options.gicon = Gio.icon_new_for_string(path);
+                    break
+                case 'power':
+                    path = Me.dir.get_path() + '/icons/hicolor/scalable/devices/ac-adapter-symbolic.svg';
+                    options.gicon = Gio.icon_new_for_string(path);
+                    break;
+                case 'temp':
+                    path = Me.dir.get_path() + '/icons/hicolor/scalable/devices/temperature-svgrepo-com-grey.svg';
+                    options.gicon = Gio.icon_new_for_string(path);
+                    break;
+                case 'clock':
+                    path = Me.dir.get_path() + '/icons/hicolor/scalable/devices/speedometer-grey.svg';
+                    options.gicon = Gio.icon_new_for_string(path);
+                    break;
+                case 'memory_clock':
+                    path = Me.dir.get_path() + '/icons/hicolor/scalable/devices/memory-speed-symbolic.svg';
+                    options.gicon = Gio.icon_new_for_string(path);
+                    break;
+                case 'remove':
+                    return;
+                default:
+                    // Temporary default icon
+                    options.icon_name = 'network-workgroup-symbolic';
+            }
+            return new IndicatorModule.Icon(options);
+        }
+
+        setLeftIcon(type) {
+            let icon = this._getIcon(type);
+            if (icon) {
+                super.switchToIcon(icon);
+            }
+        }
+        setRightIcon(type) {
+            let icon = this._getIcon(type);
+
+            let children = this.actor.get_children();
+            let position = -1;
+            for (let i in children) {
+                if (children[i] == this.rightIcon) {
+                    position = i;
+                    break;
+                }
+            }
+            if (position != -1) {
+                this.actor.remove_actor(this.rightIcon);
+                if (type != 'remove') {
+                    this.icon = icon;
+                    this.actor.insert_child_at_index(this.icon, position);
+                }
+            }
+        }
+
+        hideLeftIcon() {
+            super.hideIcon();
+        }
+        hideRightIcon() {
+            this.rightIcon.hide();
+        }
+    
+        showLeftIcon() {
+            super.showIcon();
+        }
+        showRightIcon() {
+            this.rightIcon.show();
+        }
+
+        setLeftLabel(text) {
+            super.setLabel(text);
+        }
+        setRightLabel(text) {
+            this.rightLabel.text = text;
         }
     });
