@@ -679,6 +679,9 @@ var GPUMeter = function(options) {
 		this.temp_unit = Util.CELSIUS;
 	}
 
+	this.observers = [];
+	this._gpu = GPUMeter.createGPU(this.temp_unit);
+
 	// todo: make it possible to switch between primary and secondary GPU 
 	// (need button on widget)
 	this.selectGPU = function () {
@@ -702,13 +705,8 @@ var GPUMeter = function(options) {
 		}
 	}
 
-	this.observers = [];
-	this.amd_gpu_loads = [];
-	this.amd_glib_source = null;
-	this._gpu = GPUMeter.createGPU(this.temp_unit);
-
 	if (GPUMeter._gpus === null) {
-		GPUMeter.loadGPUs(this.temp_unit).then(() => this.selectGPU()).catch(e => logError(e));
+		GPUMeter.loadGPUs(this.temp_unit).then(() => this.selectGPU()).catch(e => log(e));
 	} else {
 		this.selectGPU();
 	}
@@ -749,10 +747,6 @@ var GPUMeter = function(options) {
 
 	this.destroy = function () {
 		FactoryModule.AbstractFactory.destroy('file', this);
-
-		if (this.amd_glib_source != null) {
-			this.amd_glib_source.destroy();
-		}
 	};
 
 	this.getNvidiaInfo = function (gpu_id) {
