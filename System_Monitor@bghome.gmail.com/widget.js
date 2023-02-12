@@ -441,7 +441,7 @@ var GPUItemsContainer = GObject.registerClass(
             gpu = gpu.stats;
 
             let leftValues = [
-                ' '.repeat(2) + gpu.mem_usage + ' %',
+                ' '.repeat(1) + gpu.mem_usage + ' %',
                 gpu.clock + ' ' + gpu.clock_unit,
                 gpu.temp + ' ' + gpu.temp_unit
             ];
