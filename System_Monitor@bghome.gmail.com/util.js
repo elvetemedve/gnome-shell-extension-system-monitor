@@ -236,63 +236,70 @@ var uW2W = (value, decimals) => +(value / 1000000).toFixed(decimals);
 var mDeg2Deg = (value, decimals) => +(value / 1000).toFixed(decimals);
 
 
-var formatDeviceInfo = function (info) {
-    let res = {};
-    try {
-        Object.assign(res, info);
-        res.vendor_name = res.vendor_name.replace("Corporation", "").trim();
-        let model_name = res.model_name.match(/\[(.+?)\]/)[1];
-        let vendor = res.vendor_name.toLowerCase().trim();
+var formatDeviceInfo = async function (info, namespace) {
+    switch (info.vendor_id) {
+        case "v000010DE":
+            info.vendor_name = "Nvidia";
+            break;
+        case "v00001022":
+        case "v00001002":
+            info.vendor_name = "AMD";
+            break
+        case "v00008086":
+            info.vendor_name = "Intel";
+    }
+    
+    let model = info.model_name.match(/\[(.+?)\]/)[1];
+    let regex = null;
 
-        if (vendor === "nvidia") {
-            res.vendor_name = "Nvidia";
-            is_mobile = model_name.includes("Mobile");
-            is_max_x = model_name.includes("Max");
+    if (info.vendor_name === "Nvidia") {
+        if (model.includes("Mobile") && model.includes("Max")) {
+            regex = /GeForce|Mobile|\s\/\s/g;  // /GeForce|Mobile|Max([^\s]+)|\//g
+        } else {
+            regex = /GeForce/;
+        }
+    } else if (info.vendor_name === "AMD") {
+        // Try to Identify the exact model using the chip revision
+        if (model.includes("/") && info.pcie_id != "-") {    
+            let is_ids_file = await FactoryModule.AbstractFactory.create('file', namespace, "/usr/share/libdrm/amdgpu.ids").exists();
+            let is_lspcie = await FactoryModule.AbstractFactory.create('file', namespace, "/usr/bin/lspci").exists();
+            
+            if (is_ids_file && is_lspcie) {    
+                let model_id = info.model_id.replace(/d0+/, "").trim();
+                let pcie_id = info.pcie_id.startsWith("0000:") ? info.pcie_id.replace("0000:", "").trim() : info.pcie_id;
+                
+                let [success, stdout, stderr] = GLib.spawn_command_line_sync("lspci -s " + pcie_id);
+                let rev = new TextDecoder().decode(stdout).split(/\(rev\s/)[1].replace(")", "").toUpperCase().trim();
 
-            if (is_mobile && is_max_x) {
-                regex = /GeForce|Mobile|\s\/\s/g;  // /GeForce|Mobile|Max([^\s]+)|\//g
-            } else {
-                regex = /GeForce/;
+                let amdgpu_info = await FactoryModule.AbstractFactory.create('file', namespace, "/usr/share/libdrm/amdgpu.ids").read().catch(e => log(e));
+                let models = amdgpu_info.split("\n").filter(line => line.startsWith(model_id));
+                let found = false;
+
+                for (model of models) {
+                    let [device_id, revision, name] = model.split(',');
+                    if (revision.trim() === rev) {
+                        model = name.trim();
+                        found = true;
+                        break;
+                    }
+                }
+                if (!found) {
+                    model = model.split("/")[0];
+                }
             }
-
-            model_name = model_name.replace(regex, "").trim();
-        } else if (vendor === "Intel") {
-            res.vendor_name = "Intel";
-        } else if (vendor === "amd") {
-            res.vendor_name = "AMD";
         }
-
-        res.model_name = model_name;
-    } catch (e) {
-        logError(e);
-    }
-    return res
+        regex = /AMD|Radeon|ATI/g;
+    } 
+    info.model_name = (regex) ? model.replace(regex, "").trim() : model;
 }
 
-var pcieID = async function (uevent_path, namespace) {
-    
-    uevent_output = await FactoryModule.AbstractFactory.create('file', namespace, uevent_path).read()
-        .then(content => content.trim().split("\n"))
-        .catch(e => "");
-    
-    FactoryModule.AbstractFactory.destroy('file', namespace);
-
-    for (let line of uevent_output) {
-        if (line.startsWith("PCI_SLOT_NAME=")) {
-            return line.split("=").pop();
-        }
-    }
-    return "-";
-}
-
-
-var deviceInfo = async function (modalias_path, namespace, temp_namespace) {
-    let result = { vendor_name: "Unknown", vendor_id: "-", model_name: "Unknown", model_id: "-" };
+var deviceInfo = async function (device, namespace, temp_namespace) {
+    let info = { pcie_id: "-", vendor_name: "Unknown", vendor_id: "-", model_name: "Unknown", model_id: "-" };
     let pci_usb_hardware_database_dir = "/usr/share/hwdata/";
     let udev_hardware_database_dir = null;
 
     try {   
-        modalias_output = await FactoryModule.AbstractFactory.create('file', temp_namespace, modalias_path).read();
+        modalias_output = await FactoryModule.AbstractFactory.create('file', temp_namespace, device.modalias).read();
         FactoryModule.AbstractFactory.destroy('file', temp_namespace);
 
         //Define hardware database file directories for "udev" if "hwdata" is not installed.
@@ -313,44 +320,55 @@ var deviceInfo = async function (modalias_path, namespace, temp_namespace) {
         }
 
         let [device_subtype, device_alias] = modalias_output.split(":");
-        log("DeviceInfo: subtype: " + device_subtype + ", alias: " + device_alias);
 
         //Get device vendor, model if device subtype is PCI.
         if (device_subtype == "pci") {
             // Get device IDs from modalias file content.
             let first_index = device_alias.search("v");
             let last_index = first_index + 8 + 1;
-            result.vendor_id = device_alias.slice(first_index, last_index);
+            info.vendor_id = device_alias.slice(first_index, last_index);
             
             first_index = device_alias.search("d");
             last_index = first_index + 8 + 1;
-            result.model_id = device_alias.slice(first_index, last_index);
+            info.model_id = device_alias.slice(first_index, last_index);
 
             let search_text1;
             let search_text2;
             let ids_file_output;
 
             if (udev_hardware_database_dir === null) {
-                search_text1 = "\n" + result.vendor_id.slice(5).toLowerCase() + "  ";
-                search_text2 = "\n\t" + result.model_id.slice(5).toLowerCase() + "  ";
+                search_text1 = "\n" + info.vendor_id.slice(5).toLowerCase() + "  ";
+                search_text2 = "\n\t" + info.model_id.slice(5).toLowerCase() + "  ";
                 ids_file_output = await FactoryModule.AbstractFactory.create("file", namespace, pci_usb_hardware_database_dir + "pci.ids").read();
             } else {
-                search_text1 = "pci:" + result.vendor_id + "*" + "\n ID_VENDOR_FROM_DATABASE="
-                search_text2 = "pci:" + result.vendor_id + result.model_id + "*" + "\n ID_MODEL_FROM_DATABASE=";
+                search_text1 = "pci:" + info.vendor_id + "*" + "\n ID_VENDOR_FROM_DATABASE="
+                search_text2 = "pci:" + info.vendor_id + info.model_id + "*" + "\n ID_MODEL_FROM_DATABASE=";
                 ids_file_output = await FactoryModule.AbstractFactory.create('file', namespace, udev_hardware_database_dir + "20-pci-vendor-model.hwdb").read();
             }
 
             if (ids_file_output.includes(search_text1)) {
                 let narrowed_output = ids_file_output.split(search_text1)[1];
-                result.vendor_name = narrowed_output.split("\n")[0];
+                info.vendor_name = narrowed_output.split("\n")[0];
 
                 if (narrowed_output.includes(search_text2)) {
-                    result.model_name = narrowed_output.split(search_text2)[1].split("\n")[0];
+                    info.model_name = narrowed_output.split(search_text2)[1].split("\n")[0];
                 }
             }
+
+            let pcie_id = "-";
+            uevent_output = await FactoryModule.AbstractFactory.create('file', temp_namespace, device.uevent).read().then(content => content.trim().split("\n")).catch(e => "");
+            
+            for (let line of uevent_output) {
+                if (line.startsWith("PCI_SLOT_NAME=")) {
+                    pcie_id = line.split("=").pop();
+                }
+            }
+            info.pcie_id = pcie_id;
         }
+
+        await formatDeviceInfo(info, namespace);
     } catch (e) {
         log(e);
     }
-    return result; 
+    return info; 
 }
