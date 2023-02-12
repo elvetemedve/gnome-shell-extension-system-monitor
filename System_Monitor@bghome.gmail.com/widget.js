@@ -500,11 +500,11 @@ var GPUItem = GObject.registerClass(
                     options.gicon = Gio.icon_new_for_string(path);
                     break;
                 case 'temp':
-                    path = Me.dir.get_path() + '/icons/hicolor/scalable/devices/temperature-svgrepo-com-grey.svg';
+                    path = Me.dir.get_path() + '/icons/hicolor/scalable/devices/temperature-svgrepo-com.svg';
                     options.gicon = Gio.icon_new_for_string(path);
                     break;
                 case 'clock':
-                    path = Me.dir.get_path() + '/icons/hicolor/scalable/devices/speedometer-grey.svg';
+                    path = Me.dir.get_path() + '/icons/hicolor/scalable/devices/speedometer-symbolic.svg';
                     options.gicon = Gio.icon_new_for_string(path);
                     break;
                 case 'memory_clock':
