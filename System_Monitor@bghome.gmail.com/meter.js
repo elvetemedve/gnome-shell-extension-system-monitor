@@ -750,57 +750,34 @@ var GPUMeter = function(options) {
 	};
 
 	this.getNvidiaInfo = function (gpu_id) {
-		const command = "nvidia-smi --query-gpu=memory.total,memory.used,utilization.memory,utilization.gpu,power.draw,power.limit,clocks.current.memory,clocks.current.graphics,clocks.max.memory,clocks.max.graphics,temperature.gpu --format=csv --id=" + gpu_id;
+		const command = "nvidia-smi --query-gpu=memory.total,memory.used,utilization.memory,utilization.gpu,power.draw,power.limit,clocks.current.memory,clocks.current.graphics,clocks.max.memory,clocks.max.graphics,temperature.gpu --format=csv,nounits --id=" + gpu_id;
+		const mappings = {
+			mem: (str) => Util.MiB2GiB(parseFloat(str), 1),
+			mem_used: (str) => Util.MiB2GiB(parseFloat(str), 1),
+			mem_usage: parseFloat,
+			usage: parseFloat,
+			power_usage: parseFloat,
+			power_limit: parseInt,
+			mem_clock: parseInt,
+			clock: parseInt,
+			mem_clock_max: parseInt,
+			clock_max: parseInt,
+			temp: (str) => (this.temp_unit == Util.FAHRENHEIT) ? Util.toFahrenheit(parseFloat(str), 1) : parseFloat(str)
+		};
+		
 		return new Promise((resolve, reject) => {
 			let [res, stdout, stderr] = GLib.spawn_command_line_sync(command);
 			let [keys, data] = new TextDecoder().decode(stdout).split("\n");
 			
 			let parts = data.split(",");
 			let stats = GPUMeter.createStats(this.temp_unit);
-	
-			stats["temp"] = parts.pop().trim();
-			if (this.temp_unit == Util.FAHRENHEIT) {
-				stats["temp"] = Util.toFahrenheit(stats["temp"]);
+			
+			let i = 0;
+			for (const [key, parser] of Object.entries(mappings)) {
+				stats[key] = parser(parts[i].trim());
+				i++;
 			}
-	
-			let [value, unit] = parts.pop().trim().split(" ");
-			stats["clock_max"] = parseInt(value.trim());
-			stats["clock_unit"] = unit.trim();
-	
-			[value, unit] = parts.pop().trim().split(" ");
-			stats["mem_clock_max"] = parseInt(value.trim());
-	
-			[value, unit] = parts.pop().trim().split(" ");
-			stats["clock"] = parseInt(value.trim());
-	
-			[value, unit] = parts.pop().trim().split(" ");
-			stats["mem_clock"] = parseInt(value.trim());
-
-			[value, unit] = parts.pop().trim().split(" ");
-			stats["power_limit"] = parseInt(value.trim());
-			stats["power_unit"] = unit.trim();
-	
-			[value, unit] = parts.pop().trim().split(" ");
-			stats["power_usage"] = parseFloat(value.trim());
-	
-			[value, unit] = parts.pop().trim().split(" ");
-			stats["usage"] = parseFloat(value.trim());
-	
-			[value, unit] = parts.pop().trim().split(" ");
-			stats["mem_usage"] = parseFloat(value.trim());
-	
-			[value, unit] = parts.pop().trim().split(" ");
-			stats["mem_used"] = parseFloat(value.trim());
-			stats["mem_unit"] = unit.trim();
-	
-			[value, unit] = parts.pop().trim().split(" ");
-			stats["mem"] = parseFloat(value.trim());
-	
-			for (key of ["mem_used", "mem"]) {
-				stats[key] = Util.MiB2GiB(stats[key], 1);
-			}
-			stats["mem_unit"] = "GiB";
-	
+			
 			resolve(stats);
 		});
 	};
