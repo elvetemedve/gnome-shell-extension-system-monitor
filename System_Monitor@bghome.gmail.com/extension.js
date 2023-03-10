@@ -1,3 +1,5 @@
+"use strict";
+
 const { GLib } = imports.gi;
 
 const Mainloop = imports.mainloop;

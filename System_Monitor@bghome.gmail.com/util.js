@@ -1,3 +1,5 @@
+"use strict";
+
 const Util = imports.misc.util;
 const GTop = imports.gi.GTop;
 const GLib = imports.gi.GLib;
