@@ -16,18 +16,23 @@ File.prototype.exists = function() {
 
 File.prototype.read = function() {
     return new Promise((resolve, reject) => {
-        try {
-            this.file.load_contents_async(null, function(file, res) {
-                try {
-                    let contents = ByteArray.toString(file.load_contents_finish(res)[1]);
-                    resolve(contents);
-                } catch (e) {
-                    reject(e);
-                }
-            });
-        } catch (e) {
-            reject(e);
-        }
+        let that = this;
+        GLib.idle_add(GLib.PRIORITY_DEFAULT_IDLE, function() {
+            try {
+                that.file.load_contents_async(null, function(file, res) {
+                    try {
+                        let contents = ByteArray.toString(file.load_contents_finish(res)[1]);
+                        resolve(contents);
+                    } catch (e) {
+                        reject(e);
+                    }
+                });
+            } catch (e) {
+                reject(e);
+            }
+
+            return GLib.SOURCE_REMOVE;
+        });
     });
 };
 
