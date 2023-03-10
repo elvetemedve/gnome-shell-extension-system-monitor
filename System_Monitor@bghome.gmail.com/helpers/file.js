@@ -22,11 +22,11 @@ File.prototype.read = function() {
                     let contents = ByteArray.toString(file.load_contents_finish(res)[1]);
                     resolve(contents);
                 } catch (e) {
-                    reject(e.message);
+                    reject(e);
                 }
             });
         } catch (e) {
-            reject(e.message);
+            reject(e);
         }
     });
 };
@@ -56,17 +56,17 @@ File.prototype.list = function() {
                                 enumerator.next_files_async(max_items, GLib.PRIORITY_LOW, null, callback);
                             }
                         } catch (e) {
-                            reject(e.message);
+                            reject(e);
                         }
                     };
 
                     enumerator.next_files_async(max_items, GLib.PRIORITY_LOW, null, callback);
                 } catch (e) {
-                    reject(e.message);
+                    reject(e);
                 }
             });
         } catch (e) {
-            reject(e.message);
+            reject(e);
         }
     });
 };

@@ -569,7 +569,7 @@ var SwapMeter = function(options) {
 			}
 
 			return processes.getTopProcesses(process_stats, "memory", 3);
-		});
+		}).catch(logError);
 	};
 
 	this.destroy = function() {

@@ -50,9 +50,7 @@ const Timer = class {
 var timer;
 
 function enable() {
-    let view = new View.Menu();
-    view.updateUi();
-    timer = new Timer({view: view});
+    timer = new Timer({view: new View.Menu()});
     timer.start();
 }
 

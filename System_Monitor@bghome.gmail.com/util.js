@@ -165,6 +165,7 @@ var Swap = class {
                     } catch (e) {
                         reject(e);
                     }
+
                     return GLib.SOURCE_REMOVE;
                 });
             });
