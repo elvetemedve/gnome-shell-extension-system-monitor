@@ -4,7 +4,6 @@ const GLib = imports.gi.GLib;
 const Me = imports.misc.extensionUtils.getCurrentExtension();
 const FactoryModule = Me.imports.factory;
 const Util = Me.imports.util;
-const Promise = Me.imports.helpers.promise.Promise;
 
 function MeterSubject(options) {
 	this.observers = [];

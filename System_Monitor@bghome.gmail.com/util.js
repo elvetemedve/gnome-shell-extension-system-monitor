@@ -4,7 +4,6 @@ const GLib = imports.gi.GLib;
 
 const Me = imports.misc.extensionUtils.getCurrentExtension();
 const FactoryModule = Me.imports.factory;
-const Promise = Me.imports.helpers.promise.Promise;
 
 var Process = class {
     constructor(id) {

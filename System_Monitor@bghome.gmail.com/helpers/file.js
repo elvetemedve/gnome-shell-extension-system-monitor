@@ -3,7 +3,6 @@ const Gio = imports.gi.Gio;
 const ByteArray = imports.byteArray;
 
 const Me = imports.misc.extensionUtils.getCurrentExtension();
-const Promise = Me.imports.helpers.promise.Promise;
 
 function File(path) {
     this.file = Gio.File.new_for_path(path);
