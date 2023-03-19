@@ -1,10 +1,11 @@
+"use strict";
+
 const Util = imports.misc.util;
 const GTop = imports.gi.GTop;
 const GLib = imports.gi.GLib;
 
 const Me = imports.misc.extensionUtils.getCurrentExtension();
 const FactoryModule = Me.imports.factory;
-const Promise = Me.imports.helpers.promise.Promise;
 
 var Process = class {
     constructor(id) {
@@ -130,9 +131,10 @@ var Network = class {
 };
 
 var Swap = class {
-    constructor(id) {
+    constructor() {
         this._processes = new Processes;
-        this._pattern = new RegExp('^VmSwap:\\s*(\\d+)', 'm');
+        this._pattern = new RegExp('^\\s*VmSwap:\\s*(\\d+)', 'm');
+        this._pidDenylist = [];
     }
 
     /**
@@ -143,20 +145,31 @@ var Swap = class {
      */
     getStatisticsPerProcess() {
         return this._processes.getIds().then(process_ids => {
+            // Filter out denied PIDs from the live PID list.
+            let filteredProcessIds = process_ids.filter(x => this._pidDenylist.indexOf(x) === -1);
+
             return new Promise((resolve, reject) => {
                 let that = this;
                 GLib.idle_add(GLib.PRIORITY_LOW, function() {
 					try {
                         let promises = [];
-                        for (let i = 0; i < process_ids.length; i++) {
-                            let pid = process_ids[i];
-                            promises.push(that._getRawStastisticsForProcess(pid));
+                        for (let i = 0; i < filteredProcessIds.length; i++) {
+                            let pid = filteredProcessIds[i];
+                            promises.push(that._getRawStastisticsForProcess(pid).catch(() => {
+                                // Add PID resulting in a failed query to the deny list.
+                                // Dont't collect statistics for such PIDs next time.
+                                that._pidDenylist.push(pid)
+                            }));
                         }
 
                         Promise.all(promises).then(rawStatistics => {
                             let statistics = {};
                             for (let i = 0; i < rawStatistics.length; i++) {
-                                let pid = process_ids[i];
+                                // Skip rejected promises which does not produce a result object.
+                                if (Object.prototype.toString.call(rawStatistics[i]) !== '[object Object]') {
+                                    continue;
+                                }
+                                let pid = filteredProcessIds[i];
                                 statistics[pid] = rawStatistics[i];
                             }
                             resolve(statistics);
@@ -164,6 +177,7 @@ var Swap = class {
                     } catch (e) {
                         reject(e);
                     }
+
                     return GLib.SOURCE_REMOVE;
                 });
             });
@@ -173,13 +187,9 @@ var Swap = class {
     _getRawStastisticsForProcess(pid) {
         let pattern = this._pattern;
         return FactoryModule.AbstractFactory.create('file', this, '/proc/' + pid + '/status').read().then(contents => {
-            try {
-                return { vm_swap: parseInt(contents.match(pattern)[1]) };
-            } catch (e) {
-                return { vm_swap: 0 };
-            }
-        }, () => {
-            return { vm_swap: 0 };
+            return {
+                vm_swap: parseInt(contents.match(pattern)[1])
+            };
         });
     }
 };

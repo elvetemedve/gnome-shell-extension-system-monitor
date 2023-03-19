@@ -1,9 +1,10 @@
+"use strict";
+
 const GLib = imports.gi.GLib;
 const Gio = imports.gi.Gio;
 const ByteArray = imports.byteArray;
 
 const Me = imports.misc.extensionUtils.getCurrentExtension();
-const Promise = Me.imports.helpers.promise.Promise;
 
 function File(path) {
     this.file = Gio.File.new_for_path(path);
@@ -15,18 +16,23 @@ File.prototype.exists = function() {
 
 File.prototype.read = function() {
     return new Promise((resolve, reject) => {
-        try {
-            this.file.load_contents_async(null, function(file, res) {
-                try {
-                    let contents = ByteArray.toString(file.load_contents_finish(res)[1]);
-                    resolve(contents);
-                } catch (e) {
-                    reject(e.message);
-                }
-            });
-        } catch (e) {
-            reject(e.message);
-        }
+        let that = this;
+        GLib.idle_add(GLib.PRIORITY_DEFAULT_IDLE, function() {
+            try {
+                that.file.load_contents_async(null, function(file, res) {
+                    try {
+                        let contents = ByteArray.toString(file.load_contents_finish(res)[1]);
+                        resolve(contents);
+                    } catch (e) {
+                        reject(e);
+                    }
+                });
+            } catch (e) {
+                reject(e);
+            }
+
+            return GLib.SOURCE_REMOVE;
+        });
     });
 };
 
@@ -55,17 +61,17 @@ File.prototype.list = function() {
                                 enumerator.next_files_async(max_items, GLib.PRIORITY_LOW, null, callback);
                             }
                         } catch (e) {
-                            reject(e.message);
+                            reject(e);
                         }
                     };
 
                     enumerator.next_files_async(max_items, GLib.PRIORITY_LOW, null, callback);
                 } catch (e) {
-                    reject(e.message);
+                    reject(e);
                 }
             });
         } catch (e) {
-            reject(e.message);
+            reject(e);
         }
     });
 };

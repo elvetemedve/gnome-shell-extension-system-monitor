@@ -1,3 +1,5 @@
+"use strict";
+
 const { GLib } = imports.gi;
 
 const Mainloop = imports.mainloop;
@@ -48,9 +50,7 @@ const Timer = class {
 var timer;
 
 function enable() {
-    let view = new View.Menu();
-    view.updateUi();
-    timer = new Timer({view: view});
+    timer = new Timer({view: new View.Menu()});
     timer.start();
 }
 

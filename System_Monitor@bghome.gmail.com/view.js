@@ -1,3 +1,5 @@
+"use strict";
+
 const { GObject, St } = imports.gi;
 
 const Panel = imports.ui.main.panel;

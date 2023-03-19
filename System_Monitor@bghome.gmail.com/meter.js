@@ -1,10 +1,11 @@
+"use strict";
+
 const GTop = imports.gi.GTop;
 const GLib = imports.gi.GLib;
 
 const Me = imports.misc.extensionUtils.getCurrentExtension();
 const FactoryModule = Me.imports.factory;
 const Util = Me.imports.util;
-const Promise = Me.imports.helpers.promise.Promise;
 
 function MeterSubject(options) {
 	this.observers = [];
@@ -568,7 +569,7 @@ var SwapMeter = function(options) {
 			}
 
 			return processes.getTopProcesses(process_stats, "memory", 3);
-		});
+		}).catch(logError);
 	};
 
 	this.destroy = function() {

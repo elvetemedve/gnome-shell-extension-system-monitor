@@ -1,3 +1,5 @@
+"use strict";
+
 const GObject = imports.gi.GObject;
 const Gtk = imports.gi.Gtk;
 const Gio = imports.gi.Gio;

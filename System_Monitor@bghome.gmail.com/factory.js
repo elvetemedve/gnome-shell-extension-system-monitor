@@ -1,3 +1,5 @@
+"use strict";
+
 const Me = imports.misc.extensionUtils.getCurrentExtension();
 const IndicatorModule = Me.imports.indicator;
 const MeterModule = Me.imports.meter;
