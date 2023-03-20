@@ -6,18 +6,24 @@ const GLib = imports.gi.GLib;
 
 const Me = imports.misc.extensionUtils.getCurrentExtension();
 const FactoryModule = Me.imports.factory;
+const AsyncModule = Me.imports.helpers.async;
 
 var Process = class {
+    #id
     constructor(id) {
-        this._id = id;
+        this.#id = id;
     }
 
     kill() {
-        Util.spawn([ 'bash', '-c', 'kill -s TERM ' + parseInt(this._id) ]);
+        Util.spawn([ 'bash', '-c', 'kill -s TERM ' + parseInt(this.#id) ]);
     }
 };
 
 var Processes = class {
+    #tasks
+    constructor() {
+        this.#tasks = new AsyncModule.Tasks();
+    }
     /**
      * Get ID list of running processes
      *
@@ -26,7 +32,7 @@ var Processes = class {
      */
     getIds() {
         return new Promise((resolve, reject) => {
-            GLib.idle_add(GLib.PRIORITY_LOW, function() {
+            this.#tasks.newSubtask(() => {
                 try {
                     let proclist = new GTop.glibtop_proclist;
                     let pid_list = GTop.glibtop_get_proclist(proclist, 0, 0);
@@ -40,9 +46,8 @@ var Processes = class {
                 } catch(e) {
                     reject(e);
                 }
-                return GLib.SOURCE_REMOVE;
             });
-        });
+        }).catch(logError);
     }
 
     /**
@@ -69,6 +74,11 @@ var Processes = class {
             }
         }
         return result;
+    }
+
+    destroy() {
+        this.#tasks.cancel();
+        this.#tasks = null;
     }
 };
 
@@ -131,10 +141,15 @@ var Network = class {
 };
 
 var Swap = class {
+    #processes
+    #pattern
+    #pidDenylist
+    #tasks
     constructor() {
-        this._processes = new Processes;
-        this._pattern = new RegExp('^\\s*VmSwap:\\s*(\\d+)', 'm');
-        this._pidDenylist = [];
+        this.#processes = new Processes;
+        this.#pattern = new RegExp('^\\s*VmSwap:\\s*(\\d+)', 'm');
+        this.#pidDenylist = [];
+        this.#tasks = new AsyncModule.Tasks();
     }
 
     /**
@@ -144,21 +159,21 @@ var Swap = class {
      * @return Promise Keys are process IDs, values are objects like {vm_swap: 1234}
      */
     getStatisticsPerProcess() {
-        return this._processes.getIds().then(process_ids => {
+        return this.#processes.getIds().then(process_ids => {
             // Filter out denied PIDs from the live PID list.
-            let filteredProcessIds = process_ids.filter(x => this._pidDenylist.indexOf(x) === -1);
+            let filteredProcessIds = process_ids.filter(x => this.#pidDenylist.indexOf(x) === -1);
 
             return new Promise((resolve, reject) => {
                 let that = this;
-                GLib.idle_add(GLib.PRIORITY_LOW, function() {
-					try {
+                this.#tasks.newSubtask(() => {
+                    try {
                         let promises = [];
                         for (let i = 0; i < filteredProcessIds.length; i++) {
                             let pid = filteredProcessIds[i];
-                            promises.push(that._getRawStastisticsForProcess(pid).catch(() => {
+                            promises.push(that.#getRawStastisticsForProcess(pid).catch(() => {
                                 // Add PID resulting in a failed query to the deny list.
                                 // Dont't collect statistics for such PIDs next time.
-                                that._pidDenylist.push(pid)
+                                that.#pidDenylist.push(pid);
                             }));
                         }
 
@@ -177,18 +192,23 @@ var Swap = class {
                     } catch (e) {
                         reject(e);
                     }
-
-                    return GLib.SOURCE_REMOVE;
                 });
             });
         });
     }
 
-    _getRawStastisticsForProcess(pid) {
-        let pattern = this._pattern;
+    destroy() {
+        FactoryModule.AbstractFactory.destroy('file', this);
+        this.#processes.destroy();
+        this.#processes = null;
+        this.#tasks.cancel();
+        this.#tasks = null;
+    }
+
+    #getRawStastisticsForProcess(pid) {
         return FactoryModule.AbstractFactory.create('file', this, '/proc/' + pid + '/status').read().then(contents => {
             return {
-                vm_swap: parseInt(contents.match(pattern)[1])
+                vm_swap: parseInt(contents.match(this.#pattern)[1])
             };
         });
     }
