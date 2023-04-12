@@ -146,6 +146,7 @@ const FileFactory = (function() {
 		this.destroy = function(namespace) {
             let files = openedFiles[namespace];
 			for (let filename in files) {
+				files[filename].destroy();
                 delete files[filename];
 			}
 		}

@@ -5,9 +5,11 @@ const Gio = imports.gi.Gio;
 const ByteArray = imports.byteArray;
 
 const Me = imports.misc.extensionUtils.getCurrentExtension();
+const AsyncModule = Me.imports.helpers.async;
 
 function File(path) {
     this.file = Gio.File.new_for_path(path);
+    this.tasks = new AsyncModule.Tasks();
 }
 
 File.prototype.exists = function() {
@@ -15,9 +17,10 @@ File.prototype.exists = function() {
 };
 
 File.prototype.read = function() {
+    let that = this;
+
     return new Promise((resolve, reject) => {
-        let that = this;
-        GLib.idle_add(GLib.PRIORITY_DEFAULT_IDLE, function() {
+        this.tasks.newSubtask(() => {
             try {
                 that.file.load_contents_async(null, function(file, res) {
                     try {
@@ -30,8 +33,6 @@ File.prototype.read = function() {
             } catch (e) {
                 reject(e);
             }
-
-            return GLib.SOURCE_REMOVE;
         });
     });
 };
@@ -87,6 +88,11 @@ File.prototype.create = function(text, replace) {
         resolve();
     });
 };
+
+File.prototype.destroy = function() {
+    this.tasks.cancel();
+    this.tasks = null;
+}
 
 File.prototype.append = function(text) {
     return new Promise(resolve => {
