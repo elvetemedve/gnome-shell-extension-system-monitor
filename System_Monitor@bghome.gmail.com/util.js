@@ -29,22 +29,24 @@ var Processes = class {
      * @return Promise
      */
     getIds() {
-        return new Promise((resolve, reject) => {
-            this._tasks.newSubtask(() => {
-                try {
-                    let proclist = new GTop.glibtop_proclist;
-                    let pid_list = GTop.glibtop_get_proclist(proclist, 0, 0);
-                    let ids = [];
-                    for (let pid of pid_list) {
-                        if (pid > 0) {
-                            ids.push(pid);
-                        }
+        const task = (resolve, reject) => {
+            try {
+                let proclist = new GTop.glibtop_proclist;
+                let pid_list = GTop.glibtop_get_proclist(proclist, 0, 0);
+                let ids = [];
+                for (let pid of pid_list) {
+                    if (pid > 0) {
+                        ids.push(pid);
                     }
-                    resolve(ids);
-                } catch(e) {
-                    reject(e);
                 }
-            });
+                resolve(ids);
+            } catch(e) {
+                reject(e);
+            }
+        };
+
+        return new Promise((resolve, reject) => {
+            this._tasks.newSubtask(() => task(resolve, reject));
         }).catch(logError);
     }
 
@@ -153,40 +155,41 @@ var Swap = class {
      * @return Promise Keys are process IDs, values are objects like {vm_swap: 1234}
      */
     getStatisticsPerProcess() {
+        const task = (resolve, reject, filteredProcessIds, that) => {
+            try {
+                let promises = [];
+                for (let i = 0; i < filteredProcessIds.length; i++) {
+                    let pid = filteredProcessIds[i];
+                    promises.push(that._getRawStastisticsForProcess(pid).catch(() => {
+                        // Add PID resulting in a failed query to the deny list.
+                        // Dont't collect statistics for such PIDs next time.
+                        that._pidDenylist.push(pid);
+                    }));
+                }
+
+                Promise.all(promises).then(rawStatistics => {
+                    let statistics = {};
+                    for (let i = 0; i < rawStatistics.length; i++) {
+                        // Skip rejected promises which does not produce a result object.
+                        if (Object.prototype.toString.call(rawStatistics[i]) !== '[object Object]') {
+                            continue;
+                        }
+                        let pid = filteredProcessIds[i];
+                        statistics[pid] = rawStatistics[i];
+                    }
+                    resolve(statistics);
+                });
+            } catch (e) {
+                reject(e);
+            }
+        };
+
         return this._processes.getIds().then(process_ids => {
             // Filter out denied PIDs from the live PID list.
             let filteredProcessIds = process_ids.filter(x => this._pidDenylist.indexOf(x) === -1);
 
             return new Promise((resolve, reject) => {
-                let that = this;
-                this._tasks.newSubtask(() => {
-                    try {
-                        let promises = [];
-                        for (let i = 0; i < filteredProcessIds.length; i++) {
-                            let pid = filteredProcessIds[i];
-                            promises.push(that._getRawStastisticsForProcess(pid).catch(() => {
-                                // Add PID resulting in a failed query to the deny list.
-                                // Dont't collect statistics for such PIDs next time.
-                                that._pidDenylist.push(pid);
-                            }));
-                        }
-
-                        Promise.all(promises).then(rawStatistics => {
-                            let statistics = {};
-                            for (let i = 0; i < rawStatistics.length; i++) {
-                                // Skip rejected promises which does not produce a result object.
-                                if (Object.prototype.toString.call(rawStatistics[i]) !== '[object Object]') {
-                                    continue;
-                                }
-                                let pid = filteredProcessIds[i];
-                                statistics[pid] = rawStatistics[i];
-                            }
-                            resolve(statistics);
-                        });
-                    } catch (e) {
-                        reject(e);
-                    }
-                });
+                this._tasks.newSubtask(() => task(resolve, reject, filteredProcessIds, this));
             });
         });
     }
