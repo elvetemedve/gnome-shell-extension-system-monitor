@@ -127,8 +127,8 @@ class Menu extends PanelMenu.Button {
                 let icon = that._createIcon(type);
                 that._createMeterWidget(type, icon);
             } else {
-                that._destroyIcon(type);
                 that._destroyMeterWidget(type);
+                that._destroyIcon(type);
             }
         });
         this._event_handler_ids.push(event_id);
