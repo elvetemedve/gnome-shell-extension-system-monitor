@@ -9,20 +9,18 @@ const FactoryModule = Me.imports.factory;
 const AsyncModule = Me.imports.helpers.async;
 
 var Process = class {
-    #id
     constructor(id) {
-        this.#id = id;
+        this._id = id;
     }
 
     kill() {
-        Util.spawn([ 'bash', '-c', 'kill -s TERM ' + parseInt(this.#id) ]);
+        Util.spawn([ 'bash', '-c', 'kill -s TERM ' + parseInt(this._id) ]);
     }
 };
 
 var Processes = class {
-    #tasks
     constructor() {
-        this.#tasks = new AsyncModule.Tasks();
+        this._tasks = new AsyncModule.Tasks();
     }
     /**
      * Get ID list of running processes
@@ -32,7 +30,7 @@ var Processes = class {
      */
     getIds() {
         return new Promise((resolve, reject) => {
-            this.#tasks.newSubtask(() => {
+            this._tasks.newSubtask(() => {
                 try {
                     let proclist = new GTop.glibtop_proclist;
                     let pid_list = GTop.glibtop_get_proclist(proclist, 0, 0);
@@ -77,8 +75,8 @@ var Processes = class {
     }
 
     destroy() {
-        this.#tasks.cancel();
-        this.#tasks = null;
+        this._tasks.cancel();
+        this._tasks = null;
     }
 };
 
@@ -141,15 +139,11 @@ var Network = class {
 };
 
 var Swap = class {
-    #processes
-    #pattern
-    #pidDenylist
-    #tasks
     constructor() {
-        this.#processes = new Processes;
-        this.#pattern = new RegExp('^\\s*VmSwap:\\s*(\\d+)', 'm');
-        this.#pidDenylist = [];
-        this.#tasks = new AsyncModule.Tasks();
+        this._processes = new Processes;
+        this._pattern = new RegExp('^\\s*VmSwap:\\s*(\\d+)', 'm');
+        this._pidDenylist = [];
+        this._tasks = new AsyncModule.Tasks();
     }
 
     /**
@@ -159,21 +153,21 @@ var Swap = class {
      * @return Promise Keys are process IDs, values are objects like {vm_swap: 1234}
      */
     getStatisticsPerProcess() {
-        return this.#processes.getIds().then(process_ids => {
+        return this._processes.getIds().then(process_ids => {
             // Filter out denied PIDs from the live PID list.
-            let filteredProcessIds = process_ids.filter(x => this.#pidDenylist.indexOf(x) === -1);
+            let filteredProcessIds = process_ids.filter(x => this._pidDenylist.indexOf(x) === -1);
 
             return new Promise((resolve, reject) => {
                 let that = this;
-                this.#tasks.newSubtask(() => {
+                this._tasks.newSubtask(() => {
                     try {
                         let promises = [];
                         for (let i = 0; i < filteredProcessIds.length; i++) {
                             let pid = filteredProcessIds[i];
-                            promises.push(that.#getRawStastisticsForProcess(pid).catch(() => {
+                            promises.push(that._getRawStastisticsForProcess(pid).catch(() => {
                                 // Add PID resulting in a failed query to the deny list.
                                 // Dont't collect statistics for such PIDs next time.
-                                that.#pidDenylist.push(pid);
+                                that._pidDenylist.push(pid);
                             }));
                         }
 
@@ -199,16 +193,16 @@ var Swap = class {
 
     destroy() {
         FactoryModule.AbstractFactory.destroy('file', this);
-        this.#processes.destroy();
-        this.#processes = null;
-        this.#tasks.cancel();
-        this.#tasks = null;
+        this._processes.destroy();
+        this._processes = null;
+        this._tasks.cancel();
+        this._tasks = null;
     }
 
-    #getRawStastisticsForProcess(pid) {
+    _getRawStastisticsForProcess(pid) {
         return FactoryModule.AbstractFactory.create('file', this, '/proc/' + pid + '/status').read().then(contents => {
             return {
-                vm_swap: parseInt(contents.match(this.#pattern)[1])
+                vm_swap: parseInt(contents.match(this._pattern)[1])
             };
         });
     }

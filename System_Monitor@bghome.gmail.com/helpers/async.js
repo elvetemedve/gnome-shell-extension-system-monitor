@@ -6,9 +6,8 @@ const GLib = imports.gi.GLib;
  * Represents a set of background tasks, executed asynchronously.
  */
 var Tasks = class {
-    #tasks
     constructor() {
-        this.#tasks = new Set();
+        this._tasks = new Set();
     }
 
     /**
@@ -19,7 +18,7 @@ var Tasks = class {
      * @param function fn Function to execute as a task.
      */
     newSubtask(fn) {
-        this.#new(fn, GLib.PRIORITY_DEFAULT_IDLE);
+        this._new(fn, GLib.PRIORITY_DEFAULT_IDLE);
     }
 
     /**
@@ -30,28 +29,28 @@ var Tasks = class {
      * @param function fn Function to execute as a task.
      */
     newTask(fn) {
-        this.#new(fn, GLib.PRIORITY_LOW);
+        this._new(fn, GLib.PRIORITY_LOW);
     }
 
-    #new(fn, priority) {
+    _new(fn, priority) {
         let that = this;
         let decoratedFn = () => {
             fn();
-            that.#tasks.delete(task);
+            that._tasks.delete(task);
         };
         let task = new Task(decoratedFn, priority);
 
-        this.#tasks.add(task);
+        this._tasks.add(task);
     }
 
     /**
      * Cancel all pending tasks.
      */
     cancel() {
-        this.#tasks.forEach((task) => {
+        this._tasks.forEach((task) => {
             task.cancel();
         });
-        this.#tasks.clear();
+        this._tasks.clear();
     }
 };
 
@@ -61,28 +60,29 @@ var Tasks = class {
  * Registers a new  background task ready to be executed asynchronously.
  */
 let Task = class {
-    #sourceId
+
     constructor(fn, priority) {
-        this.#run(fn, priority)
+        this._sourceId = null
+        this._run(fn, priority)
     }
 
-    #attachSource = function(sourceId) {
-        this.#sourceId = sourceId;
+    _attachSource = function(sourceId) {
+        this._sourceId = sourceId;
     }
 
-    #detachSource = function() {
-        if (this.#sourceId) {
-            GLib.Source.remove(this.#sourceId);
-            this.#sourceId = null;
+    _detachSource = function() {
+        if (this._sourceId) {
+            GLib.Source.remove(this._sourceId);
+            this._sourceId = null;
         }
     }
 
-    #run(fn, priority) {
+    _run(fn, priority) {
         let that = this;
 
-        this.#attachSource(GLib.idle_add(priority, function() {
+        this._attachSource(GLib.idle_add(priority, function() {
             fn();
-            that.#detachSource();
+            that._detachSource();
 
             return GLib.SOURCE_REMOVE;
         }));
@@ -92,6 +92,6 @@ let Task = class {
      * Remove task from the background queue, if execution has not been started yet.
      */
     cancel() {
-        this.#detachSource();
+        this._detachSource();
     }
 };
