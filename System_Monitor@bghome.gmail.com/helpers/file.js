@@ -1,12 +1,15 @@
+"use strict";
+
 const GLib = imports.gi.GLib;
 const Gio = imports.gi.Gio;
 const ByteArray = imports.byteArray;
 
 const Me = imports.misc.extensionUtils.getCurrentExtension();
-const Promise = Me.imports.helpers.promise.Promise;
+const AsyncModule = Me.imports.helpers.async;
 
 function File(path) {
     this.file = Gio.File.new_for_path(path);
+    this.tasks = new AsyncModule.Tasks();
 }
 
 File.prototype.exists = function() {
@@ -14,19 +17,23 @@ File.prototype.exists = function() {
 };
 
 File.prototype.read = function() {
+    let that = this;
+
     return new Promise((resolve, reject) => {
-        try {
-            this.file.load_contents_async(null, function(file, res) {
-                try {
-                    let contents = ByteArray.toString(file.load_contents_finish(res)[1]);
-                    resolve(contents);
-                } catch (e) {
-                    reject(e.message);
-                }
-            });
-        } catch (e) {
-            reject(e.message);
-        }
+        this.tasks.newSubtask(() => {
+            try {
+                that.file.load_contents_async(null, function(file, res) {
+                    try {
+                        let contents = ByteArray.toString(file.load_contents_finish(res)[1]);
+                        resolve(contents);
+                    } catch (e) {
+                        reject(e);
+                    }
+                });
+            } catch (e) {
+                reject(e);
+            }
+        });
     });
 };
 
@@ -55,17 +62,17 @@ File.prototype.list = function() {
                                 enumerator.next_files_async(max_items, GLib.PRIORITY_LOW, null, callback);
                             }
                         } catch (e) {
-                            reject(e.message);
+                            reject(e);
                         }
                     };
 
                     enumerator.next_files_async(max_items, GLib.PRIORITY_LOW, null, callback);
                 } catch (e) {
-                    reject(e.message);
+                    reject(e);
                 }
             });
         } catch (e) {
-            reject(e.message);
+            reject(e);
         }
     });
 };
@@ -81,6 +88,11 @@ File.prototype.create = function(text, replace) {
         resolve();
     });
 };
+
+File.prototype.destroy = function() {
+    this.tasks.cancel();
+    this.tasks = null;
+}
 
 File.prototype.append = function(text) {
     return new Promise(resolve => {

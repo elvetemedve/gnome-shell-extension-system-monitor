@@ -1,3 +1,5 @@
+"use strict";
+
 const { GObject, St } = imports.gi;
 
 const Panel = imports.ui.main.panel;
@@ -136,8 +138,8 @@ class Menu extends PanelMenu.Button {
                 let icon = that._createIcon(type);
                 that._createMeterWidget(type, icon);
             } else {
-                that._destroyIcon(type);
                 that._destroyMeterWidget(type);
+                that._destroyIcon(type);
             }
         });
         this._event_handler_ids.push(event_id);
@@ -163,8 +165,8 @@ class Menu extends PanelMenu.Button {
             // Reload the memory meter if it's enabled.
             let type = PrefsKeys.MEMORY_METER;
             if (settings.get_boolean(type)) {
-                that._destroyIcon(type);
                 that._destroyMeterWidget(type);
+                that._destroyIcon(type);
                 let icon = that._createIcon(type);
                 that._createMeterWidget(type, icon);
             }
@@ -192,8 +194,8 @@ class Menu extends PanelMenu.Button {
     _handleActivityChange(settings, key) {
         let meters = this._meters;
         for (let type in meters) {
-            this._destroyIcon(type);
             this._destroyMeterWidget(type);
+            this._destroyIcon(type);
         }
 
         this._initIconsAndWidgets();
@@ -212,9 +214,7 @@ class Menu extends PanelMenu.Button {
     }
     _destroyMeterWidget(type) {
         let meter_widget = this._meter_widgets[type];
-        if (this._meters[type]) {
-            this._meters[type].removeObserver(meter_widget);
-        }
+        this._meters[type].removeObserver(meter_widget);
         this._widget_area_container.removeMeter(meter_widget);
         meter_widget.destroy();
         delete this._meter_widgets[type];
@@ -223,8 +223,8 @@ class Menu extends PanelMenu.Button {
         let meters = this._meters;
         for (let type in meters) {
             meters[type].destroy();
-            this._destroyIcon(type);
             this._destroyMeterWidget(type);
+            this._destroyIcon(type);
         }
 
         this._removeAllSettingChangedHandlers();

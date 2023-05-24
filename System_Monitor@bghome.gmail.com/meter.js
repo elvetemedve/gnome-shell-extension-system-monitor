@@ -1,10 +1,12 @@
+"use strict";
+
 const GTop = imports.gi.GTop;
 const GLib = imports.gi.GLib;
 
 const Me = imports.misc.extensionUtils.getCurrentExtension();
 const FactoryModule = Me.imports.factory;
 const Util = Me.imports.util;
-const Promise = Me.imports.helpers.promise.Promise;
+const AsyncModule = Me.imports.helpers.async;
 
 function MeterSubject(options) {
 	this.observers = [];
@@ -172,7 +174,6 @@ MeterSubject.prototype.hasActivity = function() {
 };
 
 MeterSubject.prototype.destroy = function() {
-	// FIXME cancel all pending Promises.
 };
 
 var CpuMeter = function(options) {
@@ -186,6 +187,7 @@ var CpuMeter = function(options) {
 	};
 	let processes = new Util.Processes;
 	let process_time = new GTop.glibtop_proc_time();
+	let tasks = new AsyncModule.Tasks();
 
 	this.loadData = function() {
 		return FactoryModule.AbstractFactory.create('file', this, '/proc/stat').read().then(contents => {
@@ -233,7 +235,7 @@ var CpuMeter = function(options) {
 		return processes.getIds().then(process_ids => {
 			return new Promise((resolve, reject) => {
 				let that = this;
-				GLib.idle_add(GLib.PRIORITY_LOW, function() {
+				tasks.newTask(() => {
 					try {
 						let process_stats = [];
 						for (let i = 0; i < process_ids.length; i++) {
@@ -246,14 +248,17 @@ var CpuMeter = function(options) {
 					} catch (e) {
 						reject(e);
 					}
-                	return GLib.SOURCE_REMOVE;
-            	});
+				});
 			});
 		});
 	};
 
 	this.destroy = function() {
 		FactoryModule.AbstractFactory.destroy('file', this);
+		processes.destroy();
+		processes = null;
+		tasks.cancel();
+		tasks = null;
 	};
 };
 
@@ -276,6 +281,7 @@ var MemoryMeter = function(options) {
 	this._calculation_method = calculation_method;
 	let processes = new Util.Processes;
 	let process_memory = new GTop.glibtop_proc_mem();
+	let tasks = new AsyncModule.Tasks();
 
 	this.loadData = function() {
 		return FactoryModule.AbstractFactory.create('file', this, '/proc/meminfo').read().then(contents => {
@@ -302,7 +308,7 @@ var MemoryMeter = function(options) {
 
 		return processes.getIds().then(process_ids => {
 			return new Promise((resolve, reject) => {
-				GLib.idle_add(GLib.PRIORITY_LOW, function() {
+				tasks.newTask(() => {
 					try {
 						let process_stats = [];
 						for (let i = 0; i < process_ids.length; i++) {
@@ -318,7 +324,6 @@ var MemoryMeter = function(options) {
 					} catch (e) {
 						reject(e);
 					}
-					return GLib.SOURCE_REMOVE;
 				});
 			});
 		});
@@ -326,6 +331,10 @@ var MemoryMeter = function(options) {
 
 	this.destroy = function() {
 		FactoryModule.AbstractFactory.destroy('file', this);
+		processes.destroy();
+		processes = null;
+		tasks.cancel();
+		tasks = null;
 	};
 
 	let calculateRamOnly = function(process_memory) {
@@ -353,6 +362,7 @@ var StorageMeter = function(options) {
 	];
 	let usage = new GTop.glibtop_fsusage();
 	let directories = new Util.Directories;
+	let tasks = new AsyncModule.Tasks();
 
 	this.loadData = function() {
 		GTop.glibtop_get_fsusage(usage, '/');
@@ -369,7 +379,7 @@ var StorageMeter = function(options) {
 	this.getDirectories = function() {
 		return FactoryModule.AbstractFactory.create('file', this, '/proc/mounts').read().then(contents => {
 			return new Promise((resolve, reject) => {
-				GLib.idle_add(GLib.PRIORITY_LOW, function() {
+				tasks.newTask(() => {
 					try {
 						let mount_list = contents.split("\n").filter(function(mount_entry) {
                             return mount_entry.trim().length > 0;
@@ -390,11 +400,15 @@ var StorageMeter = function(options) {
 					} catch (e) {
 						reject(e);
 					}
-					return GLib.SOURCE_REMOVE;
 				});
 			});
 		});
 	};
+
+	this.destroy = function() {
+		tasks.cancel();
+		tasks = null;
+	}
 };
 
 StorageMeter.prototype = new MeterSubject();
@@ -584,11 +598,15 @@ var SwapMeter = function(options) {
 			}
 
 			return processes.getTopProcesses(process_stats, "memory", 3);
-		});
+		}).catch(logError);
 	};
 
 	this.destroy = function() {
 		FactoryModule.AbstractFactory.destroy('file', this);
+		swap_utility.destroy();
+		swap_utility = null;
+		processes.destroy();
+		processes = null;
 	};
 };
 

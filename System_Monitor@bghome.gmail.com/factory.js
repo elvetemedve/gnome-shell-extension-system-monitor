@@ -1,3 +1,5 @@
+"use strict";
+
 const Me = imports.misc.extensionUtils.getCurrentExtension();
 const IndicatorModule = Me.imports.indicator;
 const MeterModule = Me.imports.meter;
@@ -149,6 +151,7 @@ const FileFactory = (function() {
 		this.destroy = function(namespace) {
             let files = openedFiles[namespace];
 			for (let filename in files) {
+				files[filename].destroy();
                 delete files[filename];
 			}
 		}

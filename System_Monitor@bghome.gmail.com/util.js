@@ -1,10 +1,12 @@
+"use strict";
+
 const Util = imports.misc.util;
 const GTop = imports.gi.GTop;
 const GLib = imports.gi.GLib;
 
 const Me = imports.misc.extensionUtils.getCurrentExtension();
 const FactoryModule = Me.imports.factory;
-const Promise = Me.imports.helpers.promise.Promise;
+const AsyncModule = Me.imports.helpers.async;
 
 var Process = class {
     constructor(id) {
@@ -17,6 +19,9 @@ var Process = class {
 };
 
 var Processes = class {
+    constructor() {
+        this._tasks = new AsyncModule.Tasks();
+    }
     /**
      * Get ID list of running processes
      *
@@ -24,24 +29,25 @@ var Processes = class {
      * @return Promise
      */
     getIds() {
-        return new Promise((resolve, reject) => {
-            GLib.idle_add(GLib.PRIORITY_LOW, function() {
-                try {
-                    let proclist = new GTop.glibtop_proclist;
-                    let pid_list = GTop.glibtop_get_proclist(proclist, 0, 0);
-                    let ids = [];
-                    for (let pid of pid_list) {
-                        if (pid > 0) {
-                            ids.push(pid);
-                        }
+        const task = (resolve, reject) => {
+            try {
+                let proclist = new GTop.glibtop_proclist;
+                let pid_list = GTop.glibtop_get_proclist(proclist, 0, 0);
+                let ids = [];
+                for (let pid of pid_list) {
+                    if (pid > 0) {
+                        ids.push(pid);
                     }
-                    resolve(ids);
-                } catch(e) {
-                    reject(e);
                 }
-                return GLib.SOURCE_REMOVE;
-            });
-        });
+                resolve(ids);
+            } catch(e) {
+                reject(e);
+            }
+        };
+
+        return new Promise((resolve, reject) => {
+            this._tasks.newSubtask(() => task(resolve, reject));
+        }).catch(logError);
     }
 
     /**
@@ -68,6 +74,11 @@ var Processes = class {
             }
         }
         return result;
+    }
+
+    destroy() {
+        this._tasks.cancel();
+        this._tasks = null;
     }
 };
 
@@ -130,9 +141,11 @@ var Network = class {
 };
 
 var Swap = class {
-    constructor(id) {
+    constructor() {
         this._processes = new Processes;
-        this._pattern = new RegExp('^VmSwap:\\s*(\\d+)', 'm');
+        this._pattern = new RegExp('^\\s*VmSwap:\\s*(\\d+)', 'm');
+        this._pidDenylist = [];
+        this._tasks = new AsyncModule.Tasks();
     }
 
     /**
@@ -142,44 +155,58 @@ var Swap = class {
      * @return Promise Keys are process IDs, values are objects like {vm_swap: 1234}
      */
     getStatisticsPerProcess() {
-        return this._processes.getIds().then(process_ids => {
-            return new Promise((resolve, reject) => {
-                let that = this;
-                GLib.idle_add(GLib.PRIORITY_LOW, function() {
-					try {
-                        let promises = [];
-                        for (let i = 0; i < process_ids.length; i++) {
-                            let pid = process_ids[i];
-                            promises.push(that._getRawStastisticsForProcess(pid));
-                        }
+        const task = (resolve, reject, filteredProcessIds, that) => {
+            try {
+                let promises = [];
+                for (let i = 0; i < filteredProcessIds.length; i++) {
+                    let pid = filteredProcessIds[i];
+                    promises.push(that._getRawStastisticsForProcess(pid).catch(() => {
+                        // Add PID resulting in a failed query to the deny list.
+                        // Dont't collect statistics for such PIDs next time.
+                        that._pidDenylist.push(pid);
+                    }));
+                }
 
-                        Promise.all(promises).then(rawStatistics => {
-                            let statistics = {};
-                            for (let i = 0; i < rawStatistics.length; i++) {
-                                let pid = process_ids[i];
-                                statistics[pid] = rawStatistics[i];
-                            }
-                            resolve(statistics);
-                        });
-                    } catch (e) {
-                        reject(e);
+                Promise.all(promises).then(rawStatistics => {
+                    let statistics = {};
+                    for (let i = 0; i < rawStatistics.length; i++) {
+                        // Skip rejected promises which does not produce a result object.
+                        if (Object.prototype.toString.call(rawStatistics[i]) !== '[object Object]') {
+                            continue;
+                        }
+                        let pid = filteredProcessIds[i];
+                        statistics[pid] = rawStatistics[i];
                     }
-                    return GLib.SOURCE_REMOVE;
+                    resolve(statistics);
                 });
+            } catch (e) {
+                reject(e);
+            }
+        };
+
+        return this._processes.getIds().then(process_ids => {
+            // Filter out denied PIDs from the live PID list.
+            let filteredProcessIds = process_ids.filter(x => this._pidDenylist.indexOf(x) === -1);
+
+            return new Promise((resolve, reject) => {
+                this._tasks.newSubtask(() => task(resolve, reject, filteredProcessIds, this));
             });
         });
     }
 
+    destroy() {
+        FactoryModule.AbstractFactory.destroy('file', this);
+        this._processes.destroy();
+        this._processes = null;
+        this._tasks.cancel();
+        this._tasks = null;
+    }
+
     _getRawStastisticsForProcess(pid) {
-        let pattern = this._pattern;
         return FactoryModule.AbstractFactory.create('file', this, '/proc/' + pid + '/status').read().then(contents => {
-            try {
-                return { vm_swap: parseInt(contents.match(pattern)[1]) };
-            } catch (e) {
-                return { vm_swap: 0 };
-            }
-        }, () => {
-            return { vm_swap: 0 };
+            return {
+                vm_swap: parseInt(contents.match(this._pattern)[1])
+            };
         });
     }
 };
