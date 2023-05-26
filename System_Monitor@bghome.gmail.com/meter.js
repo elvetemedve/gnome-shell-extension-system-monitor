@@ -707,7 +707,7 @@ var GPUMeter = function(options) {
 		const unsupported = GPUMeter.is_nvidia_smi ? ["Intel"] : ["Intel", "Nvidia"];
 		let supported = [];
 
-		for (gpu of GPUMeter._gpus) {
+		for (let gpu of GPUMeter._gpus) {
 			if (gpu.device.is_boot_vga && !unsupported.includes(gpu.vendor)) {
 				this._gpu = gpu;
 				gpu.stats.temp_unit = this.temp_unit;
@@ -831,7 +831,7 @@ var GPUMeter = function(options) {
 			
 			let clock_info = reader(device.path + device.name + "/device/pp_dpm_sclk").then(result => {
 				let output = result.trim().split("\n");
-				for (line of output) {
+				for (let line of output) {
 					if (line.includes("*")) {
 						stats.clock = line.split(":")[1].replace(/\*+$|Mhz/, '').trim();
 						stats.clock = parseInt(stats.clock);
@@ -845,7 +845,7 @@ var GPUMeter = function(options) {
 
 			let mem_clock = reader(device.path + device.name + "/device/pp_dpm_mclk").then(result => {
 				let output = result.trim().split("\n");
-				for (line of output) {
+				for (let line of output) {
 					if (line.includes("*")) {
 						stats.mem_clock = line.split(":")[1].replace(/\*+$|Mhz/, '').trim();
 						stats.mem_clock = parseInt(stats.mem_clock);
@@ -923,9 +923,9 @@ GPUMeter.getAMDSensors = function (gpu, namespace) {
 	return new Promise(resolve => {
 		let path = gpu.device.path + gpu.device.name + "/device/hwmon/";
 		FactoryModule.AbstractFactory.create('file', namespace, path).list().then(names => {
-			sensors = names.map(name => path + name + '/');
+			let sensors = names.map(name => path + name + '/');
 			resolve(sensors);
-		});
+		}).catch(e => log(e));
 	}).catch(e => {
 		log(e);
 		resolve([]);
@@ -935,7 +935,7 @@ GPUMeter.getAMDSensors = function (gpu, namespace) {
 GPUMeter._getAMDSensorsWithAttr = function (sensors, attr, namespace) {
 	return new Promise(resolve => {
 		let promises = [];
-		for (sensor of sensors) {
+		for (let sensor of sensors) {
 			promises.push(
 				FactoryModule.AbstractFactory.create('file', namespace, sensor + attr).exists().catch(e => log(e))
 			); 
@@ -993,7 +993,7 @@ GPUMeter.loadGPUs = async function (temp_unit) {
 	};
 
 	let loadInfo = async function (gpu) {
-		info = await Util.deviceInfo(gpu.device, namespace, gpu.device.name);
+		let info = await Util.deviceInfo(gpu.device, namespace, gpu.device.name);
 		
 		gpu.name = info.model_name;
 		gpu.model_id = info.model_id;
@@ -1008,9 +1008,9 @@ GPUMeter.loadGPUs = async function (temp_unit) {
 		return gpu;
 	};
 
-	names = await FactoryModule.AbstractFactory.create('file', this, '/sys/class/drm/').list();
+	let names = await FactoryModule.AbstractFactory.create('file', this, '/sys/class/drm/').list();
 
-	for (fn of names) {
+	for (let fn of names) {
 		if (!fn.includes("-") && fn.replace(num_regex, "") === "card") {
 			let gpu = GPUMeter.createGPU(temp_unit);
 			gpu.device.name = fn;

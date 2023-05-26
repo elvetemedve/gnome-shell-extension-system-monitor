@@ -326,7 +326,7 @@ var deviceInfo = async function (device, namespace, temp_namespace) {
     let udev_hardware_database_dir = null;
 
     try {   
-        modalias_output = await FactoryModule.AbstractFactory.create('file', temp_namespace, device.modalias).read();
+        let modalias_output = await FactoryModule.AbstractFactory.create('file', temp_namespace, device.modalias).read();
         FactoryModule.AbstractFactory.destroy('file', temp_namespace);
 
         //Define hardware database file directories for "udev" if "hwdata" is not installed.
@@ -383,7 +383,7 @@ var deviceInfo = async function (device, namespace, temp_namespace) {
             }
 
             let pcie_id = "-";
-            uevent_output = await FactoryModule.AbstractFactory.create('file', temp_namespace, device.uevent).read().then(content => content.trim().split("\n")).catch(e => "");
+            let uevent_output = await FactoryModule.AbstractFactory.create('file', temp_namespace, device.uevent).read().then(content => content.trim().split("\n")).catch(e => "");
             
             for (let line of uevent_output) {
                 if (line.startsWith("PCI_SLOT_NAME=")) {
