@@ -81,6 +81,12 @@ task :cleanup do
 	puts "Project is clean"
 end
 
+desc "Create wayland test session"
+task :waytest do
+	sh 'dbus-run-session -- gnome-shell --nested --wayland'
+  end
+  
+
 task :default do
 	puts 'List of available tasks:'
 	system("rake -sT")
