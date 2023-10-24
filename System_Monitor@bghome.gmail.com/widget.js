@@ -1,12 +1,13 @@
 "use strict";
 
-const { Clutter, GObject, St } = imports.gi;
+import Clutter from 'gi://Clutter';
+import GObject from 'gi://GObject';
+import St from 'gi://St';
 
-const PopupMenu = imports.ui.popupMenu;
-const Main = imports.ui.main;
+import * as PopupMenu from 'resource:///org/gnome/shell/ui/popupMenu.js';
+import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 
-const Me = imports.misc.extensionUtils.getCurrentExtension();
-const Util = Me.imports.util;
+import * as Util from './util.js';
 
 const BaseMenuItem = GObject.registerClass(
 class BaseMenuItem extends PopupMenu.PopupBaseMenuItem {

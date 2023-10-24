@@ -1,6 +1,6 @@
 "use strict";
 
-const GLib = imports.gi.GLib;
+import GLib from 'gi://GLib';
 
 /**
  * Represents a set of background tasks, executed asynchronously.

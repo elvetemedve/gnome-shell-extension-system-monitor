@@ -1,12 +1,12 @@
 "use strict";
 
-const Util = imports.misc.util;
-const GTop = imports.gi.GTop;
-const GLib = imports.gi.GLib;
+import GTop from 'gi://GTop';
+import GLib from 'gi://GLib';
 
-const Me = imports.misc.extensionUtils.getCurrentExtension();
-const FactoryModule = Me.imports.factory;
-const AsyncModule = Me.imports.helpers.async;
+import * as Util from 'resource:///org/gnome/shell/misc/util.js';
+
+import * as FactoryModule from './factory.js';
+import * as AsyncModule from './helpers/async.js';
 
 var Process = class {
     constructor(id) {
@@ -247,5 +247,5 @@ StopWatch.prototype.getElapsedSeconds = function () {
 StopWatch.prototype.printElapsed = function (name) {
     var currentName = name || 'Elapsed: ';
 
-    window.log(currentName + '[' + this.getElapsedMilliseconds() + 'ms]' + '[' + this.getElapsedSeconds() + 's]');
+    console.log(currentName + '[' + this.getElapsedMilliseconds() + 'ms]' + '[' + this.getElapsedSeconds() + 's]');
 };

@@ -1,12 +1,16 @@
 "use strict";
 
-const GObject = imports.gi.GObject;
-const Gtk = imports.gi.Gtk;
-const Gio = imports.gi.Gio;
-const Params = imports.misc.params;
-const Me = imports.misc.extensionUtils.getCurrentExtension();
-const PrefsKeys = Me.imports.prefs_keys;
-const Config = imports.misc.config;
+import Adw from 'gi://Adw';
+import GObject from 'gi://GObject';
+import Gtk from 'gi://Gtk';
+import Gio from 'gi://Gio';
+
+import {ExtensionPreferences} from 'resource:///org/gnome/Shell/Extensions/js/extensions/prefs.js';
+import * as Params from 'resource:///org/gnome/Shell/Extensions/js/misc/params.js';
+import * as Config from 'resource:///org/gnome/Shell/Extensions/js/misc/config.js';
+
+import * as PrefKeys from './prefs_keys.js';
+
 const [major] = Config.PACKAGE_VERSION.split(".");
 const shellVersion = Number.parseInt(major);
 const isGtk4 = shellVersion >= 40;
@@ -300,16 +304,18 @@ const SystemMonitorPrefsWidget = new GObject.Class({
     }
 });
 
-function init() {
+export default class SystemMonitorExtensionPreferences extends ExtensionPreferences {
+    fillPreferencesWindow(window) {
+        window._settings = this.getSettings();
 
-}
+        const page = new Adw.PreferencesPage();
 
-function buildPrefsWidget() {
-    let widget = new SystemMonitorPrefsWidget();
+        const group = new Adw.PreferencesGroup({
+            title: _('Group Title'),
+        });
+        page.add(group);
+        // new SystemMonitorPrefsWidget();
 
-    if (!isGtk4) {
-        widget.show_all();
+        window.add(page);
     }
-
-    return widget;
 }

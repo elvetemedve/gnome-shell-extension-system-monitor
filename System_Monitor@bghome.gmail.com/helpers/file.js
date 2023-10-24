@@ -1,11 +1,9 @@
 "use strict";
 
-const GLib = imports.gi.GLib;
-const Gio = imports.gi.Gio;
-const ByteArray = imports.byteArray;
+import GLib from 'gi://GLib';
+import Gio from 'gi://Gio';
 
-const Me = imports.misc.extensionUtils.getCurrentExtension();
-const AsyncModule = Me.imports.helpers.async;
+import * as AsyncModule from './async.js';
 
 function File(path) {
     this.file = Gio.File.new_for_path(path);
@@ -24,8 +22,8 @@ File.prototype.read = function() {
             try {
                 that.file.load_contents_async(null, function(file, res) {
                     try {
-                        let contents = ByteArray.toString(file.load_contents_finish(res)[1]);
-                        resolve(contents);
+                        // @see https://gjs-docs.gnome.org/gjs/encoding.md#textdecoder-decode
+                        resolve(new TextDecoder().decode(file.load_contents_finish(res)[1]));
                     } catch (e) {
                         reject(e);
                     }

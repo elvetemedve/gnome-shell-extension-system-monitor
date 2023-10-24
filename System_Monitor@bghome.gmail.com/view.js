@@ -1,15 +1,15 @@
 "use strict";
 
-const { GObject, St } = imports.gi;
+import GObject from 'gi://GObject';
+import St from 'gi://St';
 
-const Panel = imports.ui.main.panel;
-const PanelMenu = imports.ui.panelMenu;
+import {panel as Panel} from 'resource:///org/gnome/shell/ui/main.js';
+import * as PanelMenu from 'resource:///org/gnome/shell/ui/panelMenu.js';
 
-const Me = imports.misc.extensionUtils.getCurrentExtension();
-const FactoryModule = Me.imports.factory;
-const PrefsKeys = Me.imports.prefs_keys;
+import * as FactoryModule from './factory.js';
+import * as PrefKeys from './prefs_keys.js';
 
-var Menu = GObject.registerClass(
+export let Menu = GObject.registerClass(
 class Menu extends PanelMenu.Button {
     _init() {
         let menuAlignment = 0.5;

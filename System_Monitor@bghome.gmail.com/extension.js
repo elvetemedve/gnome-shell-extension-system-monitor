@@ -1,22 +1,21 @@
 "use strict";
 
-const { GLib } = imports.gi;
+import GLib from 'gi://GLib';
 
-const Mainloop = imports.mainloop;
-const Me = imports.misc.extensionUtils.getCurrentExtension();
-const View = Me.imports.view;
-const PrefsKeys = Me.imports.prefs_keys;
+import {Extension} from 'resource:///org/gnome/shell/extensions/extension.js';
+
+import * as View from './view.js';
+import * as PrefKeys from './prefs_keys.js';
 
 const Timer = class {
     constructor(params) {
-        this._settings = imports.misc.extensionUtils.getSettings();
+        this._settings = params.settings;
         this._view = params.view;
-        imports.misc.extensionUtils.initTranslations();
     }
 
     start(update_interval) {
         update_interval = update_interval || this._settings.get_int(PrefsKeys.REFRESH_INTERVAL);
-        this._timer = Mainloop.timeout_add_seconds(update_interval, () => {
+        this._timer = GLib.MainLoop.timeout_add_seconds(update_interval, () => {
             this._view.updateUi();
             return GLib.SOURCE_CONTINUE;
         });
@@ -33,7 +32,7 @@ const Timer = class {
 
     stop() {
         if (this._timer) {
-            Mainloop.source_remove(this._timer);
+            GLib.MainLoop.source_remove(this._timer);
             this._timer = null;
         }
         if (this._change_event_id) {
@@ -44,18 +43,22 @@ const Timer = class {
 
     destroy() {
         this._view.destroy();
+        this._settings = null;
+        this._view = null;
     }
 };
 
-var timer;
+export default class SystemMonitorExtension extends Extension {
+    #timer;
 
-function enable() {
-    timer = new Timer({view: new View.Menu()});
-    timer.start();
-}
+    enable() {
+        this.#timer = new Timer({view: new View.Menu(), settings: this.getSettings()});
+        this.#timer.start();
+    }
 
-function disable() {
-    timer.stop();
-    timer.destroy();
-    timer = null;
+    disable() {
+        this.#timer.stop();
+        this.#timer.destroy();
+        this.#timer = null;
+    }
 }

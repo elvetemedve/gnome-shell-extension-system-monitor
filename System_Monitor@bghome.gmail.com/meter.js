@@ -1,12 +1,11 @@
 "use strict";
 
-const GTop = imports.gi.GTop;
-const GLib = imports.gi.GLib;
+import GTop from 'gi://GTop';
+import GLib from 'gi://GLib';
 
-const Me = imports.misc.extensionUtils.getCurrentExtension();
-const FactoryModule = Me.imports.factory;
-const Util = Me.imports.util;
-const AsyncModule = Me.imports.helpers.async;
+import * as FactoryModule from './factory.js';
+import * as Util from './util.js';
+import * as AsyncModule from './helpers/async.js';
 
 function MeterSubject(options) {
 	this.observers = [];

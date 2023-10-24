@@ -1,14 +1,13 @@
 "use strict";
 
-const Me = imports.misc.extensionUtils.getCurrentExtension();
-const IndicatorModule = Me.imports.indicator;
-const MeterModule = Me.imports.meter;
-const FileModule = Me.imports.helpers.file;
-const Widget = Me.imports.widget;
-const Util = Me.imports.util;
+import * as IndicatorModule from './indicator.js';
+import * as MeterModule from './meter.js';
+import * as FileModule from './helpers/file.js';
+import * as Widget from './widget.js';
+import * as Util from './util.js';
+import * as PrefKeys from './prefs_keys.js';
 
-const Gio = imports.gi.Gio;
-const PrefsKeys = Me.imports.prefs_keys;
+import Gio from 'gi://Gio';
 
 var AbstractFactory = (function() {
 
@@ -209,7 +208,7 @@ MeterWidgetItemFactory.prototype.create = function(type) {
         case PrefsKeys.MEMORY_METER:
         case PrefsKeys.SWAP_METER:
             return new Widget.ProcessItem('loading...', "edit-delete-symbolic", function(actor, event, state) {
-                log('Process called "{name}" with PID {pid} is going to be killed by user resuest.'.replace('{name}', state.command).replace('{pid}', state.pid));
+                console.info('Process called "{name}" with PID {pid} is going to be killed by user resuest.'.replace('{name}', state.command).replace('{pid}', state.pid));
                 (new Util.Process(state.pid)).kill();
             });
 

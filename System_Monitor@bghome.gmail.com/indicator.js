@@ -1,6 +1,8 @@
 "use strict";
 
-const { Clutter, GObject, St } = imports.gi;
+import Clutter from 'gi://Clutter';
+import GObject from 'gi://GObject';
+import St from 'gi://St';
 
 var Icon = GObject.registerClass(
 class Icon extends St.Icon {
