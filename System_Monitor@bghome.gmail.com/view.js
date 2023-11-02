@@ -3,24 +3,26 @@
 import GObject from 'gi://GObject';
 import St from 'gi://St';
 
+import {Extension} from 'resource:///org/gnome/shell/extensions/extension.js';
 import {panel as Panel} from 'resource:///org/gnome/shell/ui/main.js';
 import * as PanelMenu from 'resource:///org/gnome/shell/ui/panelMenu.js';
 
 import * as FactoryModule from './factory.js';
-import * as PrefKeys from './prefs_keys.js';
+import * as PrefsKeys from './prefs_keys.js';
 
-export let Menu = GObject.registerClass(
+export const Menu = GObject.registerClass(
 class Menu extends PanelMenu.Button {
     _init() {
         let menuAlignment = 0.5;
+        let extensionObject = Extension.lookupByURL(import.meta.url);
         super._init(menuAlignment);
 
+        this._layout = new St.BoxLayout();
+        this._settings = extensionObject.getSettings();
         this._icons = {};
         this._meters = {};
         this._meter_widgets = {};
         this._event_handler_ids = [];
-    	this._layout = new St.BoxLayout();
-        this._settings = imports.misc.extensionUtils.getSettings();
         this._indicator_sort_order = 1;
         this.available_meters = [PrefsKeys.CPU_METER, PrefsKeys.MEMORY_METER, PrefsKeys.STORAGE_METER, PrefsKeys.NETWORK_METER, PrefsKeys.SWAP_METER, PrefsKeys.LOAD_METER];
         this._widget_area_container = FactoryModule.AbstractFactory.create('meter-area-widget');
@@ -33,7 +35,7 @@ class Menu extends PanelMenu.Button {
         this._addLayoutSettingChangedHandler();
         this._addMemoryCalculationSettingChangedHandler();
         this._addShowActivitySettingChangedHandler();
-        this._addIndicatorToTopBar(this._settings.get_string(PrefsKeys.POSITION));
+        this._addIndicatorToTopBar(this._settings.get_string(PrefsKeys.POSITION), extensionObject.metadata.uuid);
     }
     _initIconsAndWidgets() {
         for (let index in this.available_meters) {
@@ -45,8 +47,8 @@ class Menu extends PanelMenu.Button {
             this._addSettingChangedHandler(type);
         }
     }
-    _addIndicatorToTopBar(position) {
-        Panel.addToStatusArea(Me.metadata.uuid, this, this._indicator_sort_order, position);
+    _addIndicatorToTopBar(position, uuid) {
+        Panel.addToStatusArea(uuid, this, this._indicator_sort_order, position);
         this._indicator_previous_position = position;
     }
     _moveIndicatorOnTopBar(position) {

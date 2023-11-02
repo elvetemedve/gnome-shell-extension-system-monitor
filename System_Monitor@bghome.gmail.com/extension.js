@@ -5,7 +5,7 @@ import GLib from 'gi://GLib';
 import {Extension} from 'resource:///org/gnome/shell/extensions/extension.js';
 
 import * as View from './view.js';
-import * as PrefKeys from './prefs_keys.js';
+import * as PrefsKeys from './prefs_keys.js';
 
 const Timer = class {
     constructor(params) {
@@ -15,7 +15,7 @@ const Timer = class {
 
     start(update_interval) {
         update_interval = update_interval || this._settings.get_int(PrefsKeys.REFRESH_INTERVAL);
-        this._timer = GLib.MainLoop.timeout_add_seconds(update_interval, () => {
+        this._timer = GLib.timeout_add_seconds(GLib.PRIORITY_DEFAULT_IDLE, update_interval, () => {
             this._view.updateUi();
             return GLib.SOURCE_CONTINUE;
         });
@@ -32,7 +32,7 @@ const Timer = class {
 
     stop() {
         if (this._timer) {
-            GLib.MainLoop.source_remove(this._timer);
+            GLib.Source.remove(this._timer);
             this._timer = null;
         }
         if (this._change_event_id) {
@@ -52,7 +52,7 @@ export default class SystemMonitorExtension extends Extension {
     #timer;
 
     enable() {
-        this.#timer = new Timer({view: new View.Menu(), settings: this.getSettings()});
+        this.#timer = new Timer({view: new View.Menu({settings: this.getSettings()}), settings: this.getSettings()});
         this.#timer.start();
     }
 

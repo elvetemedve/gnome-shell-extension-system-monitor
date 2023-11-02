@@ -16,14 +16,14 @@ def zip_file
 end
 
 task :prepare => BUILD_DIRECTORY do
-	cp_r PACKAGE_NAME, BUILD_DIRECTORY
-	sh %{#{GLIB_SCHEMA_COMPILE_COMMAND} #{BUILD_DIRECTORY}/#{PACKAGE_NAME}/schemas}
+	cp_r PACKAGE_NAME + "/.", BUILD_DIRECTORY
+	sh %{#{GLIB_SCHEMA_COMPILE_COMMAND} #{BUILD_DIRECTORY}/schemas}
 end
 
 task :package => [:prepare, zip_file]
 file zip_file do
 	chdir(BUILD_DIRECTORY) do
-		sh %{zip -r #{zip_file} #{PACKAGE_NAME}}
+		sh %{zip -r #{zip_file} .}
 	end
 end
 
@@ -48,7 +48,7 @@ task :install, [:target] => [:cleanup, :build] do |t, args|
 
 	Rake::Task['uninstall'].invoke args.target
 	Rake::Task[target_dir].invoke
-	sh %{unzip -uo #{BUILD_DIRECTORY}/#{zip_file} -d #{target_dir}}
+	sh %{unzip -uo #{BUILD_DIRECTORY}/#{zip_file} -d #{target_dir}/#{PACKAGE_NAME}}
 	puts message
 end
 

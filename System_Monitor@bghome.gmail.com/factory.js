@@ -5,11 +5,13 @@ import * as MeterModule from './meter.js';
 import * as FileModule from './helpers/file.js';
 import * as Widget from './widget.js';
 import * as Util from './util.js';
-import * as PrefKeys from './prefs_keys.js';
+import * as PrefsKeys from './prefs_keys.js';
 
 import Gio from 'gi://Gio';
 
-var AbstractFactory = (function() {
+import {Extension} from 'resource:///org/gnome/shell/extensions/extension.js';
+
+export const AbstractFactory = (function() {
 
     var types = {};
 
@@ -63,6 +65,7 @@ IconFactory.prototype.create = function(type, options, can_show_activity) {
 	}
 
 	let constructor_options = Object.assign(default_options, options);
+	let extensionObject = Extension.lookupByURL(import.meta.url);
 
 	if (type == PrefsKeys.STORAGE_METER) {
 		constructor_options.icon_name = 'drive-harddisk-symbolic';
@@ -71,10 +74,10 @@ IconFactory.prototype.create = function(type, options, can_show_activity) {
 	} else if (type == PrefsKeys.LOAD_METER) {
 		constructor_options.icon_name = 'computer-symbolic';
 	} else if (type == PrefsKeys.CPU_METER) {
-        let path = Me.dir.get_path() + '/icons/hicolor/scalable/devices/cpu-symbolic.svg';
+        let path = extensionObject.path + '/icons/hicolor/scalable/devices/cpu-symbolic.svg';
 		constructor_options.gicon = Gio.icon_new_for_string(path);
 	} else if (type == PrefsKeys.MEMORY_METER) {
-        let path = Me.dir.get_path() + '/icons/hicolor/scalable/devices/memory-symbolic.svg';
+        let path = extensionObject.path + '/icons/hicolor/scalable/devices/memory-symbolic.svg';
 		constructor_options.gicon = Gio.icon_new_for_string(path);
 	} else if (type == PrefsKeys.SWAP_METER) {
 		constructor_options.icon_name = 'media-removable-symbolic';
@@ -181,10 +184,10 @@ MeterWidgetFactory.prototype.create = function(type, icon) {
 		title = 'Network';
         meter_widget = new Widget.NetworkInterfaceItemsContainer();
 	} else if (type == PrefsKeys.SWAP_METER) {
-		title = 'Virtual memory';
+		title = 'Virtual Memory';
         meter_widget = new Widget.ProcessItemsContainer();
 	} else if (type == PrefsKeys.LOAD_METER) {
-		title = 'System load';
+		title = 'System Load';
         meter_widget = new Widget.SystemLoadItemsContainer();
 	} else {
 		throw new RangeError('Unknown meter type "' + type + '" given.');

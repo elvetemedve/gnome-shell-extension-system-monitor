@@ -9,7 +9,7 @@ import {ExtensionPreferences} from 'resource:///org/gnome/Shell/Extensions/js/ex
 import * as Params from 'resource:///org/gnome/Shell/Extensions/js/misc/params.js';
 import * as Config from 'resource:///org/gnome/Shell/Extensions/js/misc/config.js';
 
-import * as PrefKeys from './prefs_keys.js';
+import * as PrefsKeys from './prefs_keys.js';
 
 const [major] = Config.PACKAGE_VERSION.split(".");
 const shellVersion = Number.parseInt(major);

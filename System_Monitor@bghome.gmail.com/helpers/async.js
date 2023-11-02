@@ -5,7 +5,7 @@ import GLib from 'gi://GLib';
 /**
  * Represents a set of background tasks, executed asynchronously.
  */
-var Tasks = class {
+export class Tasks {
     constructor() {
         this._tasks = new Set();
     }
@@ -52,7 +52,7 @@ var Tasks = class {
         });
         this._tasks.clear();
     }
-};
+}
 
 /**
  * Represents a background tasks, executed asynchronously.

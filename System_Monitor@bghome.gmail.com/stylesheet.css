@@ -1,28 +1,26 @@
-.indicator-caution
-{
+.indicator-caution {
 	background-color: rgba(183, 183, 183, 0.3);
 	border-radius: 1em;
 }
 
-.resource-title
-{
+.resource-title {
+    margin-right: 1em;
+    margin-bottom: 0.5em;
+}
+
+.resource-title-label {
 	font-weight: bold;
-}
-
-.right-label
-{
-	text-align: right;
-}
-
-.item-label
-{
-    min-width: 8em;
-    max-width: 12em;
+    margin-left: 1em;
 }
 
 .bytes-text {
     min-width: 4em;
     text-align: right;
+    padding-left: 1em;
+}
+
+.interface-icon {
+    padding-left: 0.5em;
 }
 
 .meter-area-container {

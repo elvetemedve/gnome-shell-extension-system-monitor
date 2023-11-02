@@ -78,7 +78,7 @@ MeterSubject.prototype.notifyAll = function() {
 		}).then(params => {
             this.notify.apply(this, params);
             this.previous_usage = this.usage;
-        });
+        }).catch(Util.logError);
 	}
 };
 
@@ -159,7 +159,7 @@ MeterSubject.prototype.hasActivity = function() {
 MeterSubject.prototype.destroy = function() {
 };
 
-var CpuMeter = function(options) {
+export const CpuMeter = function(options) {
     if (options && options.activity_threshold) {
         this.setActivityThreshold(options.activity_threshold);
     }
@@ -181,7 +181,7 @@ var CpuMeter = function(options) {
 				statistics[columns[index]] = parseInt(reverse_data.pop());
 			}
 			return statistics;
-		});
+		}).catch(Util.logError);
 	};
 
 	this.calculateUsage = function() {
@@ -211,7 +211,7 @@ var CpuMeter = function(options) {
 
             this.usage = usage_calculator(periods);
 			return this.usage;
-		});
+		}).catch(Util.logError);
 	};
 
 	this.getProcesses = function() {
@@ -232,7 +232,7 @@ var CpuMeter = function(options) {
 						reject(e);
 					}
 				});
-			});
+			}).catch(Util.logError);
 		});
 	};
 
@@ -248,7 +248,7 @@ var CpuMeter = function(options) {
 CpuMeter.prototype = new MeterSubject();
 
 
-var MemoryMeter = function(options) {
+export const MemoryMeter = function(options) {
     if (options && options.activity_threshold) {
         this.setActivityThreshold(options.activity_threshold);
     }
@@ -275,7 +275,7 @@ var MemoryMeter = function(options) {
 				statistics[columns[index]] = parseInt(contents.match(new RegExp(columns[index] + '.*?(\\d+)', 'i')).pop());
 			}
 			return statistics;
-		});
+		}).catch(Util.logError);
 	};
 
 	this.calculateUsage = function() {
@@ -283,7 +283,7 @@ var MemoryMeter = function(options) {
 			let used = stat.memtotal - stat.memavailable;
 			this.usage = used / stat.memtotal * 100;
 			return this.usage;
-		});
+		}).catch(Util.logError);
 	};
 
 	this.getProcesses = function() {
@@ -308,7 +308,7 @@ var MemoryMeter = function(options) {
 						reject(e);
 					}
 				});
-			});
+			}).catch(Util.logError);
 		});
 	};
 
@@ -332,7 +332,7 @@ var MemoryMeter = function(options) {
 MemoryMeter.prototype = new MeterSubject();
 
 
-var StorageMeter = function(options) {
+export const StorageMeter = function(options) {
     if (options && options.activity_threshold) {
         this.setActivityThreshold(options.activity_threshold);
     }
@@ -356,7 +356,7 @@ var StorageMeter = function(options) {
 		return new Promise(resolve => {
 			this.usage = this.loadData();
 			resolve(this.usage);
-		});
+		}).catch(Util.logError);
 	};
 
 	this.getDirectories = function() {
@@ -385,7 +385,7 @@ var StorageMeter = function(options) {
 					}
 				});
 			});
-		});
+		}).catch(Util.logError);
 	};
 
 	this.destroy = function() {
@@ -397,7 +397,7 @@ var StorageMeter = function(options) {
 StorageMeter.prototype = new MeterSubject();
 
 
-var NetworkMeter = function(options) {
+export const NetworkMeter = function(options) {
     if (options && options.activity_threshold) {
         this.setActivityThreshold(options.activity_threshold);
     }
@@ -444,6 +444,8 @@ var NetworkMeter = function(options) {
 						return new Promise(resolve => {
 							resolve({});
 						});
+					}).catch(e => {
+						console.error('Network Meter load data failed: ' + e);
 					});
 				}
 			};
@@ -462,7 +464,7 @@ var NetworkMeter = function(options) {
 				}
 				return statistics;
 			});
-		});
+		}).catch(Util.logError);
 	};
 
 	this.calculateUsage = function() {
@@ -511,7 +513,7 @@ var NetworkMeter = function(options) {
 
 			this.usage = Math.round(sum_percent / total * 100);
 			return this.usage;
-		});
+		}).catch(Util.logError);
 	};
 
     this.getInterfaces = function() {
@@ -535,7 +537,7 @@ var NetworkMeter = function(options) {
 NetworkMeter.prototype = new MeterSubject();
 
 
-var SwapMeter = function(options) {
+export const SwapMeter = function(options) {
     if (options && options.activity_threshold) {
         this.setActivityThreshold(options.activity_threshold);
     }
@@ -555,7 +557,7 @@ var SwapMeter = function(options) {
 				statistics[column] = parseInt(contents.match(patterns[column]).pop());
 			}
 			return statistics;
-		});
+		}).catch(Util.logError);
 	};
 
 	this.calculateUsage = function() {
@@ -563,7 +565,7 @@ var SwapMeter = function(options) {
 			let used = stat.swaptotal - stat.swapfree;
 			this.usage = stat.swaptotal == 0 ? 0 : used / stat.swaptotal * 100;
 			return this.usage;
-		});
+		}).catch(Util.logError);
 	};
 
 	this.getProcesses = function() {
@@ -581,7 +583,7 @@ var SwapMeter = function(options) {
 			}
 
 			return processes.getTopProcesses(process_stats, "memory", 3);
-		}).catch(logError);
+		}).catch(Util.logError);
 	};
 
 	this.destroy = function() {
@@ -596,7 +598,7 @@ var SwapMeter = function(options) {
 SwapMeter.prototype = new MeterSubject();
 
 
-var SystemLoadMeter = function(options) {
+export const SystemLoadMeter = function(options) {
     if (options && options.activity_threshold) {
         this.setActivityThreshold(options.activity_threshold);
     }
@@ -613,7 +615,7 @@ var SystemLoadMeter = function(options) {
 			FactoryModule.AbstractFactory.create('file', this, '/proc/cpuinfo').read().then(contents => {
 				this._number_of_cpu_cores = contents.match(new RegExp('^processor', 'gm')).length;
 				resolve(this._number_of_cpu_cores);
-			});
+			}).catch(Util.logError);
 
 			return false;
 		});
@@ -629,7 +631,7 @@ var SystemLoadMeter = function(options) {
 				statistics[columns[index]] = parseFloat(reverse_data.pop());
 			}
 			return statistics;
-		});
+		}).catch(Util.logError);
 	};
 
 	this.calculateUsage = function() {
@@ -652,7 +654,7 @@ var SystemLoadMeter = function(options) {
 				'load_average_5': load.loadavg[1],
 				'load_average_15': load.loadavg[2]
 			});
-		});
+		}).catch(Util.logError);
 	};
 
 	this.destroy = function() {

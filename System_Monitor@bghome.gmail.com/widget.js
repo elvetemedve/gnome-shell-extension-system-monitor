@@ -121,35 +121,53 @@ class BaseMenuItem extends PopupMenu.PopupBaseMenuItem {
     }
 });
 
-var ResourceTitleItem = GObject.registerClass(
-class ResourceTitleItem extends BaseMenuItem {
-    _init(text, icon, summary_text) {
-        super._init(text, {"icon": icon, "summary_text": summary_text, style_class:"resource-title", "hover": false, "activate": false});
+export const ResourceTitleItem = GObject.registerClass(
+class ResourceTitleItem extends St.Widget {
+    #rightLabel;
+
+    constructor(text, icon, summary_text) {
+        super({
+            name: 'resource-title',
+            layout_manager: new Clutter.BoxLayout({homogeneous: false, orientation: Clutter.Orientation.HORIZONTAL}),
+            style_class: 'resource-title'
+        });
+
+        this.add_actor(icon);
+
+        let leftLabel = new St.Label({text: text, style_class: 'resource-title-label', x_expand: true, y_expand: true, x_align: Clutter.ActorAlign.START, y_align: Clutter.ActorAlign.CENTER});
+        this.add_actor(leftLabel);
+
+        this.#rightLabel = new St.Label({text: summary_text, style_class: 'resource-title-label', x_expand: true, y_expand: true, x_align: Clutter.ActorAlign.END, y_align: Clutter.ActorAlign.CENTER});
+        this.add_actor(this.#rightLabel);
+    }
+
+    setSummaryText(text) {
+        this.#rightLabel.set_text(text);
     }
 });
 
-var ProcessItem = GObject.registerClass(
+export const ProcessItem = GObject.registerClass(
 class ProcessItem extends BaseMenuItem {
     _init(text, button_icon, button_callback, button_trigger_key) {
         super._init(text, {"button_icon": button_icon, "button_callback": button_callback, "button_trigger_key": button_trigger_key, "activate": false});
     }
 });
 
-var MountItem = GObject.registerClass(
+export const MountItem = GObject.registerClass(
 class MountItem extends BaseMenuItem {
     _init(text) {
         super._init(text, {"activate": false});
     }
 });
 
-var StateItem = GObject.registerClass(
+export const StateItem = GObject.registerClass(
 class StateItem extends BaseMenuItem {
     _init(text) {
         super._init(text, {"activate": false});
     }
 });
 
-var InterfaceItem = GObject.registerClass(
+export const InterfaceItem = GObject.registerClass(
 class InterfaceItem extends BaseMenuItem {
     _init(text) {
         let icon = new St.Icon({
@@ -163,14 +181,14 @@ class InterfaceItem extends BaseMenuItem {
         this.download_icon = new St.Icon({
             icon_name: 'network-receive-symbolic',
             icon_size: 14,
-            style_class: 'system-status-icon',
+            style_class: 'interface-icon',
             x_expand: true,
             x_align:Clutter.ActorAlign.END
         });
         this.upload_icon = new St.Icon({
             icon_name: 'network-transmit-symbolic',
             icon_size: 14,
-            style_class: 'system-status-icon',
+            style_class: 'interface-icon',
             x_expand: true,
             x_align:Clutter.ActorAlign.END
         });
@@ -186,10 +204,18 @@ class InterfaceItem extends BaseMenuItem {
             x_expand: true,
             x_align:Clutter.ActorAlign.END
         });
-        this.actor.add_child(this.download_text);
-        this.actor.add_child(this.download_icon);
-        this.actor.add_child(this.upload_text);
-        this.actor.add_child(this.upload_icon);
+
+        let container = new St.BoxLayout({
+            vertical: false,
+            x_align: Clutter.ActorAlign.END,
+            x_expand: true,
+        });
+        this.actor.add_child(container);
+
+        container.add(this.download_text);
+        container.add(this.download_icon);
+        container.add(this.upload_text);
+        container.add(this.upload_icon);
     }
     switchToLoopBackIcon() {
         this.switchToIcon(
@@ -246,7 +272,7 @@ class InterfaceItem extends BaseMenuItem {
     }
 });
 
-var MeterAreaContainer = GObject.registerClass(
+export const MeterAreaContainer = GObject.registerClass(
 class MeterAreaContainer extends PopupMenu.PopupBaseMenuItem {
     _init() {
         super._init({"style_class": "meter-area-container"});
@@ -301,7 +327,7 @@ class MeterContainer extends St.BoxLayout {
     }
 });
 
-var ProcessItemsContainer = GObject.registerClass(
+export const ProcessItemsContainer = GObject.registerClass(
 class ProcessItemsContainer extends MeterContainer {
     update(state) {
         super.update(state);
@@ -321,7 +347,7 @@ class ProcessItemsContainer extends MeterContainer {
     }
 });
 
-var SystemLoadItemsContainer = GObject.registerClass(
+export const SystemLoadItemsContainer = GObject.registerClass(
 class SystemLoadItemsContainer extends MeterContainer {
     update(state) {
         super.update(state);
@@ -339,7 +365,7 @@ class SystemLoadItemsContainer extends MeterContainer {
     }
 });
 
-var DirectoriesContainer = GObject.registerClass(
+export const DirectoriesContainer = GObject.registerClass(
 class DirectoriesContainer extends MeterContainer {
     _init() {
         super._init();
@@ -364,7 +390,7 @@ class DirectoriesContainer extends MeterContainer {
     }
 });
 
-var NetworkInterfaceItemsContainer = GObject.registerClass(
+export const NetworkInterfaceItemsContainer = GObject.registerClass(
 class NetworkInterfaceItemsContainer extends MeterContainer {
     _init() {
         super._init();
