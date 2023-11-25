@@ -14,7 +14,7 @@
 }
 
 .bytes-text {
-    min-width: 4em;
+    min-width: 4.3em;
     text-align: right;
     padding-left: 1em;
 }
@@ -24,7 +24,5 @@
 }
 
 .meter-area-container {
-    max-width: 1800px;
-    max-height: 1000px;
     background-color: inherit;
 }

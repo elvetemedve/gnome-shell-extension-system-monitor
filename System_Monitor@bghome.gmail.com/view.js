@@ -28,6 +28,15 @@ class Menu extends PanelMenu.Button {
         this._widget_area_container = FactoryModule.AbstractFactory.create('meter-area-widget');
         this._widget_area_container.actor.vertical = this._settings.get_string(PrefsKeys.LAYOUT) === 'vertical';
         this.menu.addMenuItem(this._widget_area_container);
+        this._open_state_change_id = this.menu.connect('open-state-changed', (menu, is_open) => {
+            for (let type in this._meter_widgets) {
+                if (is_open) {
+                    this._meter_widgets[type].freeze();
+                } else {
+                    this._meter_widgets[type].unfreeze();
+                }
+            }
+        });
         this.add_actor(this._layout);
 
         this._initIconsAndWidgets();
@@ -205,6 +214,9 @@ class Menu extends PanelMenu.Button {
         }
 
         this._removeAllSettingChangedHandlers();
+        if (this._open_state_change_id) {
+            this.menu.disconnect(this._open_state_change_id);
+        }
         super.destroy();
     }
     updateUi() {

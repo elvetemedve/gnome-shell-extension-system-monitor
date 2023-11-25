@@ -3,6 +3,7 @@
 import Clutter from 'gi://Clutter';
 import GObject from 'gi://GObject';
 import St from 'gi://St';
+import Pango from 'gi://Pango';
 
 import * as PopupMenu from 'resource:///org/gnome/shell/ui/popupMenu.js';
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
@@ -28,11 +29,15 @@ class BaseMenuItem extends PopupMenu.PopupBaseMenuItem {
         }
 
         this.label = new St.Label({text: text, style_class: "item-label"});
-        this.labelBin = new St.Bin({child: this.label});
-        this.actor.add_child(this.labelBin);
+        this.label.clutter_text.set_line_wrap_mode(Pango.WrapMode.WORD_CHAR);
+        this.label.clutter_text.set_single_line_mode(false);
+        this.actor.add_child(this.label);
         this._change_event_id = this.connect('notify::active', menuItem => {
             // Expand ellipsized label.
-            this.label.clutter_text.set_line_wrap(menuItem.active);
+            for (let label of this.getAllLabels()) {
+                label.clutter_text.set_line_wrap(menuItem.active);
+                label.clutter_text.set_ellipsize(menuItem.active ? Pango.EllipsizeMode.NONE : Pango.EllipsizeMode.END);
+            }
         });
 
         if (summary_text) {
@@ -119,6 +124,10 @@ class BaseMenuItem extends PopupMenu.PopupBaseMenuItem {
     getState() {
         return this._state || {};
     }
+
+    getAllLabels() {
+        return [this.label];
+    }
 });
 
 export const ResourceTitleItem = GObject.registerClass(
@@ -173,24 +182,26 @@ class InterfaceItem extends BaseMenuItem {
         let icon = new St.Icon({
             icon_name: 'network-wired-no-route-symbolic',
             icon_size: 14,
-            style_class: 'system-status-icon'
+            style_class: 'system-status-icon',
+            y_align: Clutter.ActorAlign.START
         });
-        super._init(text, {"activate": false, "icon": icon});
-        this.label.style_class += ' interface-label';
+        super._init(text, {"icon": icon});
 
         this.download_icon = new St.Icon({
             icon_name: 'network-receive-symbolic',
             icon_size: 14,
             style_class: 'interface-icon',
             x_expand: true,
-            x_align:Clutter.ActorAlign.END
+            x_align:Clutter.ActorAlign.END,
+            y_align: Clutter.ActorAlign.START
         });
         this.upload_icon = new St.Icon({
             icon_name: 'network-transmit-symbolic',
             icon_size: 14,
             style_class: 'interface-icon',
             x_expand: true,
-            x_align:Clutter.ActorAlign.END
+            x_align:Clutter.ActorAlign.END,
+            y_align: Clutter.ActorAlign.START
         });
         this.download_text = new St.Label({
             text: 'loading...',
@@ -205,24 +216,21 @@ class InterfaceItem extends BaseMenuItem {
             x_align:Clutter.ActorAlign.END
         });
 
-        let container = new St.BoxLayout({
-            vertical: false,
-            x_align: Clutter.ActorAlign.END,
-            x_expand: true,
-        });
+        let container = new St.BoxLayout({vertical: false, x_expand: true, x_align:Clutter.ActorAlign.END});
         this.actor.add_child(container);
 
-        container.add(this.download_text);
-        container.add(this.download_icon);
-        container.add(this.upload_text);
-        container.add(this.upload_icon);
+        container.add_child(this.download_text);
+        container.add_child(this.download_icon);
+        container.add_child(this.upload_text);
+        container.add_child(this.upload_icon);
     }
     switchToLoopBackIcon() {
         this.switchToIcon(
             new St.Icon({
                 icon_name: 'computer-symbolic',
                 icon_size: 14,
-                style_class: 'system-status-icon'
+                style_class: 'system-status-icon',
+                y_align: Clutter.ActorAlign.START
             })
         );
     }
@@ -231,7 +239,8 @@ class InterfaceItem extends BaseMenuItem {
             new St.Icon({
                 icon_name: 'network-wired-symbolic',
                 icon_size: 14,
-                style_class: 'system-status-icon'
+                style_class: 'system-status-icon',
+                y_align: Clutter.ActorAlign.START
             })
         );
     }
@@ -240,7 +249,8 @@ class InterfaceItem extends BaseMenuItem {
             new St.Icon({
                 icon_name: 'network-wireless-symbolic',
                 icon_size: 14,
-                style_class: 'system-status-icon'
+                style_class: 'system-status-icon',
+                y_align: Clutter.ActorAlign.START
             })
         );
     }
@@ -249,7 +259,8 @@ class InterfaceItem extends BaseMenuItem {
             new St.Icon({
                 icon_name: 'network-wired-no-route-symbolic',
                 icon_size: 14,
-                style_class: 'system-status-icon'
+                style_class: 'system-status-icon',
+                y_align: Clutter.ActorAlign.START
             })
         );
     }
@@ -270,12 +281,23 @@ class InterfaceItem extends BaseMenuItem {
         this.download_icon.show();
         this.upload_icon.show();
     }
+
+    getAllLabels() {
+        let labels = [
+            this.download_text,
+            this.upload_text
+        ];
+
+        return [...super.getAllLabels(), ...labels];
+    }
 });
 
 export const MeterAreaContainer = GObject.registerClass(
 class MeterAreaContainer extends PopupMenu.PopupBaseMenuItem {
-    _init() {
-        super._init({"style_class": "meter-area-container"});
+    constructor() {
+        super({
+            style_class: "meter-area-container"
+        });
     }
     addMeter(meter, position) {
         if (!meter instanceof MeterContainer) {
@@ -305,22 +327,30 @@ class MeterContainer extends St.BoxLayout {
         if (!item instanceof ResourceTitleItem) {
             throw new TypeError("First argument of addTitleItem() method must be instance of ResourceTitleItem.");
         }
-        this.add_actor(item.actor);
+        this.add_child(item);
         this._label_item = item;
     }
     addMenuItem(item) {
         if (!item instanceof BaseMenuItem) {
             throw new TypeError("First argument of addMenuItem() method must be instance of BaseMenuItem.");
         }
-        this.add_actor(item.actor);
+        this.add_child(item);
         this._menu_items.push(item);
     }
     removeAllMenuItems() {
         for (let item of this._menu_items) {
-            this.remove_actor(item.actor);
-            item.actor.destroy();
+            this.remove_child(item);
+            item.destroy();
         }
         this._menu_items.length = 0;
+    }
+    freeze() {
+        this.natural_width = this.width;
+        this.natural_width_set = true;
+    }
+    unfreeze() {
+        this.natural_width = 0;
+        this.natural_width_set = false;
     }
     update(state) {
         this._label_item.setSummaryText(Math.round(state.percent) + ' %');
