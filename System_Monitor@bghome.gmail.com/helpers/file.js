@@ -1,31 +1,71 @@
 "use strict";
 
-const GLib = imports.gi.GLib;
-const Gio = imports.gi.Gio;
-const ByteArray = imports.byteArray;
+import GLib from 'gi://GLib';
+import Gio from 'gi://Gio';
 
-const Me = imports.misc.extensionUtils.getCurrentExtension();
-const AsyncModule = Me.imports.helpers.async;
+import * as AsyncModule from './async.js';
 
-function File(path) {
-    this.file = Gio.File.new_for_path(path);
-    this.tasks = new AsyncModule.Tasks();
-}
+export class File {
+    constructor(path) {
+        this.file = Gio.File.new_for_path(path);
+        this.tasks = new AsyncModule.Tasks();
+    }
+    
+    exists() {
+        return new Promise(resolve => resolve(this.file.query_exists(null)));
+    }
+    
+    read() {
+        let that = this;
 
-File.prototype.exists = function() {
-    return new Promise(resolve => resolve(this.file.query_exists(null)));
-};
+        return new Promise((resolve, reject) => {
+            this.tasks.newSubtask(() => {
+                try {
+                    that.file.load_contents_async(null, function(file, res) {
+                        try {
+                            // @see https://gjs-docs.gnome.org/gjs/encoding.md#textdecoder-decode
+                            resolve(new TextDecoder().decode(file.load_contents_finish(res)[1]));
+                        } catch (e) {
+                            reject(e);
+                        }
+                    });
+                } catch (e) {
+                    reject(e);
+                }
+            });
+        });
+    }
 
-File.prototype.read = function() {
-    let that = this;
+    list() {
+        return new Promise((resolve, reject) => {
+            let max_items = 100, results = [];
 
-    return new Promise((resolve, reject) => {
-        this.tasks.newSubtask(() => {
             try {
-                that.file.load_contents_async(null, function(file, res) {
+                this.file.enumerate_children_async(Gio.FILE_ATTRIBUTE_STANDARD_NAME, Gio.FileQueryInfoFlags.NONE, GLib.PRIORITY_LOW, null, function(file, res) {
                     try {
-                        let contents = ByteArray.toString(file.load_contents_finish(res)[1]);
-                        resolve(contents);
+                        let enumerator = file.enumerate_children_finish(res);
+
+                        let callback = function(enumerator, res) {
+                            try {
+                                let files = enumerator.next_files_finish(res);
+                                for (let i = 0; i < files.length; i++) {
+                                    let file_info = files[i];
+                                    results.push(file_info.get_attribute_as_string(Gio.FILE_ATTRIBUTE_STANDARD_NAME));
+                                }
+
+                                if (files.length == 0) {
+                                    enumerator.close_async(GLib.PRIORITY_LOW, null, function(){});
+
+                                    resolve(results);
+                                } else {
+                                    enumerator.next_files_async(max_items, GLib.PRIORITY_LOW, null, callback);
+                                }
+                            } catch (e) {
+                                reject(e);
+                            }
+                        };
+
+                        enumerator.next_files_async(max_items, GLib.PRIORITY_LOW, null, callback);
                     } catch (e) {
                         reject(e);
                     }
@@ -34,104 +74,65 @@ File.prototype.read = function() {
                 reject(e);
             }
         });
-    });
-};
+    }
 
-File.prototype.list = function() {
-    return new Promise((resolve, reject) => {
-        let max_items = 100, results = [];
+    create(text, replace) {
+        return new Promise(resolve => {
+            let outputstream = this.file.create(Gio.FileCreateFlags[replace ? "REPLACE_DESTINATION" : "NONE"], null);
 
-        try {
-            this.file.enumerate_children_async(Gio.FILE_ATTRIBUTE_STANDARD_NAME, Gio.FileQueryInfoFlags.NONE, GLib.PRIORITY_LOW, null, function(file, res) {
-                try {
-                    let enumerator = file.enumerate_children_finish(res);
+            outputstream.write_all(typeof text === "string" ? text : "", null);
 
-                    let callback = function(enumerator, res) {
-                        try {
-                            let files = enumerator.next_files_finish(res);
-                            for (let i = 0; i < files.length; i++) {
-                                let file_info = files[i];
-                                results.push(file_info.get_attribute_as_string(Gio.FILE_ATTRIBUTE_STANDARD_NAME));
-                            }
+            outputstream.close(null);
 
-                            if (files.length == 0) {
-                                enumerator.close_async(GLib.PRIORITY_LOW, null, function(){});
+            resolve();
+        });
+    }
 
-                                resolve(results);
-                            } else {
-                                enumerator.next_files_async(max_items, GLib.PRIORITY_LOW, null, callback);
-                            }
-                        } catch (e) {
-                            reject(e);
-                        }
-                    };
+    append(text) {
+        return new Promise(resolve => {
+            let outputstream = this.file.append_to(Gio.FileCreateFlags.NONE, null);
 
-                    enumerator.next_files_async(max_items, GLib.PRIORITY_LOW, null, callback);
-                } catch (e) {
-                    reject(e);
-                }
-            });
-        } catch (e) {
-            reject(e);
-        }
-    });
-};
+            outputstream.write_all(text, null);
 
-File.prototype.create = function(text, replace) {
-    return new Promise(resolve => {
-        let outputstream = this.file.create(Gio.FileCreateFlags[replace ? "REPLACE_DESTINATION" : "NONE"], null);
+            outputstream.close(null);
 
-        outputstream.write_all(typeof text === "string" ? text : "", null);
+            resolve();
+        });
+    }
 
-        outputstream.close(null);
+    copyto(path, replace) {
+        return new Promise(resolve => resolve(this.file.copy(new File(path).file, Gio.FileCopyFlags[replace ? "OVERWRITE" : "NONE"], null, null)));
+    }
 
-        resolve();
-    });
-};
+    moveto(path) {
+        return new Promise(resolve => resolve(this.file.move(new File(path).file, Gio.FileCopyFlags.NONE, null, null)));
+    }
 
-File.prototype.destroy = function() {
-    this.tasks.cancel();
-    this.tasks = null;
+    rename(name) {
+        return new Promise(resolve => {
+            this.file.set_display_name_async(name, GLib.PRIORITY_DEFAULT, null, (source, res) => resolve(source.set_display_name_finish(res)));
+        });
+    }
+
+    delete() {
+        return new Promise(resolve => {
+            this.file.delete_async(GLib.PRIORITY_DEFAULT, null, (source, res) => resolve(source.delete_finish(res)));
+        });
+    }
+
+    mkdir() {
+        return new Promise(resolve => {
+            this.file.make_directory_async(GLib.PRIORITY_DEFAULT, null, (source, res) => resolve(source.make_directory_finish(res)));
+        });
+    }
+
+    symlinkto(path) {
+        return new Promise(resolve => resolve(this.file.make_symbolic_link(path, null)));
+    }
+
+    destroy() {
+        this.tasks.cancel();
+        this.tasks = null;
+        this.file = null;
+    }
 }
-
-File.prototype.append = function(text) {
-    return new Promise(resolve => {
-        let outputstream = this.file.append_to(Gio.FileCreateFlags.NONE, null);
-
-        outputstream.write_all(text, null);
-
-        outputstream.close(null);
-
-        resolve();
-    });
-};
-
-File.prototype.copyto = function(path, replace) {
-    return new Promise(resolve => resolve(this.file.copy(new File(path).file, Gio.FileCopyFlags[replace ? "OVERWRITE" : "NONE"], null, null)));
-};
-
-File.prototype.moveto = function(path) {
-    return new Promise(resolve => resolve(this.file.move(new File(path).file, Gio.FileCopyFlags.NONE, null, null)));
-};
-
-File.prototype.rename = function(name) {
-    return new Promise(resolve => {
-        this.file.set_display_name_async(name, GLib.PRIORITY_DEFAULT, null, (source, res) => resolve(source.set_display_name_finish(res)));
-    });
-};
-
-File.prototype.delete = function() {
-    return new Promise(resolve => {
-        this.file.delete_async(GLib.PRIORITY_DEFAULT, null, (source, res) => resolve(source.delete_finish(res)));
-    });
-};
-
-File.prototype.mkdir = function() {
-    return new Promise(resolve => {
-        this.file.make_directory_async(GLib.PRIORITY_DEFAULT, null, (source, res) => resolve(source.make_directory_finish(res)));
-    });
-};
-
-File.prototype.symlinkto = function(path) {
-    return new Promise(resolve => resolve(this.file.make_symbolic_link(path, null)));
-};

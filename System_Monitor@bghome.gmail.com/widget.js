@@ -1,12 +1,14 @@
 "use strict";
 
-const { Clutter, GObject, St } = imports.gi;
+import Clutter from 'gi://Clutter';
+import GObject from 'gi://GObject';
+import St from 'gi://St';
+import Pango from 'gi://Pango';
 
-const PopupMenu = imports.ui.popupMenu;
-const Main = imports.ui.main;
+import * as PopupMenu from 'resource:///org/gnome/shell/ui/popupMenu.js';
+import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 
-const Me = imports.misc.extensionUtils.getCurrentExtension();
-const Util = Me.imports.util;
+import * as Util from './util.js';
 
 const BaseMenuItem = GObject.registerClass(
 class BaseMenuItem extends PopupMenu.PopupBaseMenuItem {
@@ -27,11 +29,15 @@ class BaseMenuItem extends PopupMenu.PopupBaseMenuItem {
         }
 
         this.label = new St.Label({text: text, style_class: "item-label"});
-        this.labelBin = new St.Bin({child: this.label});
-        this.actor.add_child(this.labelBin);
+        this.label.clutter_text.set_line_wrap_mode(Pango.WrapMode.WORD_CHAR);
+        this.label.clutter_text.set_single_line_mode(false);
+        this.actor.add_child(this.label);
         this._change_event_id = this.connect('notify::active', menuItem => {
             // Expand ellipsized label.
-            this.label.clutter_text.set_line_wrap(menuItem.active);
+            for (let label of this.getAllLabels()) {
+                label.clutter_text.set_line_wrap(menuItem.active);
+                label.clutter_text.set_ellipsize(menuItem.active ? Pango.EllipsizeMode.NONE : Pango.EllipsizeMode.END);
+            }
         });
 
         if (summary_text) {
@@ -118,60 +124,84 @@ class BaseMenuItem extends PopupMenu.PopupBaseMenuItem {
     getState() {
         return this._state || {};
     }
-});
 
-var ResourceTitleItem = GObject.registerClass(
-class ResourceTitleItem extends BaseMenuItem {
-    _init(text, icon, summary_text) {
-        super._init(text, {"icon": icon, "summary_text": summary_text, style_class:"resource-title", "hover": false, "activate": false});
+    getAllLabels() {
+        return [this.label];
     }
 });
 
-var ProcessItem = GObject.registerClass(
+export const ResourceTitleItem = GObject.registerClass(
+class ResourceTitleItem extends St.Widget {
+    #rightLabel;
+
+    constructor(text, icon, summary_text) {
+        super({
+            name: 'resource-title',
+            layout_manager: new Clutter.BoxLayout({homogeneous: false, orientation: Clutter.Orientation.HORIZONTAL}),
+            style_class: 'resource-title'
+        });
+
+        this.add_actor(icon);
+
+        let leftLabel = new St.Label({text: text, style_class: 'resource-title-label', x_expand: true, y_expand: true, x_align: Clutter.ActorAlign.START, y_align: Clutter.ActorAlign.CENTER});
+        this.add_actor(leftLabel);
+
+        this.#rightLabel = new St.Label({text: summary_text, style_class: 'resource-title-label', x_expand: true, y_expand: true, x_align: Clutter.ActorAlign.END, y_align: Clutter.ActorAlign.CENTER});
+        this.add_actor(this.#rightLabel);
+    }
+
+    setSummaryText(text) {
+        this.#rightLabel.set_text(text);
+    }
+});
+
+export const ProcessItem = GObject.registerClass(
 class ProcessItem extends BaseMenuItem {
     _init(text, button_icon, button_callback, button_trigger_key) {
         super._init(text, {"button_icon": button_icon, "button_callback": button_callback, "button_trigger_key": button_trigger_key, "activate": false});
     }
 });
 
-var MountItem = GObject.registerClass(
+export const MountItem = GObject.registerClass(
 class MountItem extends BaseMenuItem {
     _init(text) {
         super._init(text, {"activate": false});
     }
 });
 
-var StateItem = GObject.registerClass(
+export const StateItem = GObject.registerClass(
 class StateItem extends BaseMenuItem {
     _init(text) {
         super._init(text, {"activate": false});
     }
 });
 
-var InterfaceItem = GObject.registerClass(
+export const InterfaceItem = GObject.registerClass(
 class InterfaceItem extends BaseMenuItem {
     _init(text) {
         let icon = new St.Icon({
             icon_name: 'network-wired-no-route-symbolic',
             icon_size: 14,
-            style_class: 'system-status-icon'
+            style_class: 'system-status-icon',
+            y_align: Clutter.ActorAlign.START
         });
-        super._init(text, {"activate": false, "icon": icon});
-        this.label.style_class += ' interface-label';
+        super._init(text, {"icon": icon});
 
         this.download_icon = new St.Icon({
             icon_name: 'network-receive-symbolic',
             icon_size: 14,
-            style_class: 'system-status-icon',
+            style_class: 'interface-icon',
             x_expand: true,
-            x_align:Clutter.ActorAlign.END
+            x_align:Clutter.ActorAlign.END,
+            y_align: Clutter.ActorAlign.START
         });
         this.upload_icon = new St.Icon({
             icon_name: 'network-transmit-symbolic',
             icon_size: 14,
-            style_class: 'system-status-icon',
+            style_class: 'interface-icon',
             x_expand: true,
-            x_align:Clutter.ActorAlign.END
+            x_align:Clutter.ActorAlign.END,
+            y_align: Clutter.ActorAlign.START
         });
         this.download_text = new St.Label({
             text: 'loading...',
@@ -185,17 +215,22 @@ class InterfaceItem extends BaseMenuItem {
             x_expand: true,
             x_align:Clutter.ActorAlign.END
         });
-        this.actor.add_child(this.download_text);
-        this.actor.add_child(this.download_icon);
-        this.actor.add_child(this.upload_text);
-        this.actor.add_child(this.upload_icon);
+
+        let container = new St.BoxLayout({vertical: false, x_expand: true, x_align:Clutter.ActorAlign.END});
+        this.actor.add_child(container);
+
+        container.add_child(this.download_text);
+        container.add_child(this.download_icon);
+        container.add_child(this.upload_text);
+        container.add_child(this.upload_icon);
     }
     switchToLoopBackIcon() {
         this.switchToIcon(
             new St.Icon({
                 icon_name: 'computer-symbolic',
                 icon_size: 14,
-                style_class: 'system-status-icon'
+                style_class: 'system-status-icon',
+                y_align: Clutter.ActorAlign.START
             })
         );
     }
@@ -204,7 +239,8 @@ class InterfaceItem extends BaseMenuItem {
             new St.Icon({
                 icon_name: 'network-wired-symbolic',
                 icon_size: 14,
-                style_class: 'system-status-icon'
+                style_class: 'system-status-icon',
+                y_align: Clutter.ActorAlign.START
             })
         );
     }
@@ -213,7 +249,8 @@ class InterfaceItem extends BaseMenuItem {
             new St.Icon({
                 icon_name: 'network-wireless-symbolic',
                 icon_size: 14,
-                style_class: 'system-status-icon'
+                style_class: 'system-status-icon',
+                y_align: Clutter.ActorAlign.START
             })
         );
     }
@@ -222,7 +259,8 @@ class InterfaceItem extends BaseMenuItem {
             new St.Icon({
                 icon_name: 'network-wired-no-route-symbolic',
                 icon_size: 14,
-                style_class: 'system-status-icon'
+                style_class: 'system-status-icon',
+                y_align: Clutter.ActorAlign.START
             })
         );
     }
@@ -243,12 +281,23 @@ class InterfaceItem extends BaseMenuItem {
         this.download_icon.show();
         this.upload_icon.show();
     }
+
+    getAllLabels() {
+        let labels = [
+            this.download_text,
+            this.upload_text
+        ];
+
+        return [...super.getAllLabels(), ...labels];
+    }
 });
 
-var MeterAreaContainer = GObject.registerClass(
+export const MeterAreaContainer = GObject.registerClass(
 class MeterAreaContainer extends PopupMenu.PopupBaseMenuItem {
-    _init() {
-        super._init({"style_class": "meter-area-container"});
+    constructor() {
+        super({
+            style_class: "meter-area-container"
+        });
     }
     addMeter(meter, position) {
         if (!meter instanceof MeterContainer) {
@@ -278,29 +327,37 @@ class MeterContainer extends St.BoxLayout {
         if (!item instanceof ResourceTitleItem) {
             throw new TypeError("First argument of addTitleItem() method must be instance of ResourceTitleItem.");
         }
-        this.add_actor(item.actor);
+        this.add_child(item);
         this._label_item = item;
     }
     addMenuItem(item) {
         if (!item instanceof BaseMenuItem) {
             throw new TypeError("First argument of addMenuItem() method must be instance of BaseMenuItem.");
         }
-        this.add_actor(item.actor);
+        this.add_child(item);
         this._menu_items.push(item);
     }
     removeAllMenuItems() {
         for (let item of this._menu_items) {
-            this.remove_actor(item.actor);
-            item.actor.destroy();
+            this.remove_child(item);
+            item.destroy();
         }
         this._menu_items.length = 0;
+    }
+    freeze() {
+        this.natural_width = this.width;
+        this.natural_width_set = true;
+    }
+    unfreeze() {
+        this.natural_width = 0;
+        this.natural_width_set = false;
     }
     update(state) {
         this._label_item.setSummaryText(Math.round(state.percent) + ' %');
     }
 });
 
-var ProcessItemsContainer = GObject.registerClass(
+export const ProcessItemsContainer = GObject.registerClass(
 class ProcessItemsContainer extends MeterContainer {
     update(state) {
         super.update(state);
@@ -320,7 +377,7 @@ class ProcessItemsContainer extends MeterContainer {
     }
 });
 
-var SystemLoadItemsContainer = GObject.registerClass(
+export const SystemLoadItemsContainer = GObject.registerClass(
 class SystemLoadItemsContainer extends MeterContainer {
     update(state) {
         super.update(state);
@@ -338,7 +395,7 @@ class SystemLoadItemsContainer extends MeterContainer {
     }
 });
 
-var DirectoriesContainer = GObject.registerClass(
+export const DirectoriesContainer = GObject.registerClass(
 class DirectoriesContainer extends MeterContainer {
     _init() {
         super._init();
@@ -363,7 +420,7 @@ class DirectoriesContainer extends MeterContainer {
     }
 });
 
-var NetworkInterfaceItemsContainer = GObject.registerClass(
+export const NetworkInterfaceItemsContainer = GObject.registerClass(
 class NetworkInterfaceItemsContainer extends MeterContainer {
     _init() {
         super._init();

@@ -1,70 +1,52 @@
 "use strict";
 
-const GObject = imports.gi.GObject;
-const Gtk = imports.gi.Gtk;
-const Gio = imports.gi.Gio;
-const Params = imports.misc.params;
-const Me = imports.misc.extensionUtils.getCurrentExtension();
-const PrefsKeys = Me.imports.prefs_keys;
-const Config = imports.misc.config;
-const [major] = Config.PACKAGE_VERSION.split(".");
-const shellVersion = Number.parseInt(major);
-const isGtk4 = shellVersion >= 40;
+import Adw from 'gi://Adw';
+import GObject from 'gi://GObject';
+import Gtk from 'gi://Gtk';
+import Gio from 'gi://Gio';
 
-const PagePrefsGrid = new GObject.Class({
-    Name: 'Page.Prefs.Grid',
-    GTypeName: 'PagePrefsGrid',
-    Extends: Gtk.Grid,
+import {ExtensionPreferences, gettext as _ } from 'resource:///org/gnome/Shell/Extensions/js/extensions/prefs.js';
 
-    _init: function(params) {
-        this.parent(params);
-        this.set_orientation(Gtk.Orientation.VERTICAL);
-        this._settings = imports.misc.extensionUtils.getSettings();
-        this.margin = this.row_spacing = this.column_spacing = 10;
-        this._rownum = 0;
-    },
+import * as PrefsKeys from './prefs_keys.js';
 
-    add_entry: function(text, key) {
-        let item = new Gtk.Entry({
-            hexpand: false
+const Page = GObject.registerClass(
+class Page extends Adw.PreferencesPage {
+    constructor(title, icon_name) {
+        super({
+            "title": title,
+            "icon_name": icon_name
         });
-        item.text = this._settings.get_string(key);
-        this._settings.bind(key, item, 'text', Gio.SettingsBindFlags.DEFAULT);
+    }
+});
 
-        return this.add_row(text, item);
-    },
+class WidgetBuilder {
+    #settings;
 
-    add_shortcut: function(text, settings_key) {
-        let item = new Gtk.Entry({
-            hexpand: false
-        });
-        let that = this;
-        item.set_text(this._settings.get_strv(settings_key)[0]);
-        item.connect('changed', function(entry) {
-            let [key, mods] = Gtk.accelerator_parse(entry.get_text());
+    constructor(settings) {
+        this.#settings = settings;
+    }
 
-            if(Gtk.accelerator_valid(key, mods)) {
-                let shortcut = Gtk.accelerator_name(key, mods);
-                that._settings.set_strv(settings_key, [shortcut]);
-            }
-        });
-
-        return this.add_row(text, item);
-    },
-
-    add_boolean: function(text, key) {
+    add_boolean(label, key) {
         let item = new Gtk.Switch({
-            active: this._settings.get_boolean(key),
-            halign: Gtk.Align.END,
-            valign: Gtk.Align.END
+            active: this.#settings.get_boolean(key),
+            valign: Gtk.Align.CENTER
         });
-        this._settings.bind(key, item, 'active', Gio.SettingsBindFlags.DEFAULT);
+        this.#settings.bind(key, item, 'active', Gio.SettingsBindFlags.DEFAULT);
 
-        return this.add_row(text, item);
-    },
+        let row = new Adw.ActionRow({
+            title: label,
+            activatable_widget: item
+        });
 
-    add_combo: function(text, key, list, type) {
-        let item = new Gtk.ComboBoxText();
+        row.add_suffix(item);
+
+        return row;
+    }
+
+    add_combo(label, key, list, type) {
+        let item = new Gtk.ComboBoxText({
+           valign: Gtk.Align.CENTER
+        });
         let that = this;
 
         for(let i = 0; i < list.length; i++) {
@@ -74,242 +56,154 @@ const PagePrefsGrid = new GObject.Class({
         }
 
         if(type === 'string') {
-            item.set_active_id(this._settings.get_string(key));
+            item.set_active_id(this.#settings.get_string(key));
         }
         else {
-            item.set_active_id(this._settings.get_int(key).toString());
+            item.set_active_id(this.#settings.get_int(key).toString());
         }
 
         item.connect('changed', function(combo) {
             let value = combo.get_active_id();
 
             if(type === 'string') {
-                if(that._settings.get_string(key) !== value) {
-                    that._settings.set_string(key, value);
+                if(that.#settings.get_string(key) !== value) {
+                    that.#settings.set_string(key, value);
                 }
             }
             else {
                 value = parseInt(value, 10);
 
-                if(that._settings.get_int(key) !== value) {
-                    that_settings.set_int(key, value);
+                if(that.#settings.get_int(key) !== value) {
+                    that.#settings.set_int(key, value);
                 }
             }
         });
 
-        return this.add_row(text, item);
-    },
+        let row = new Adw.ActionRow({
+            title: label,
+            activatable: true
+        });
 
-    add_spin: function(label, key, adjustment_properties, spin_properties) {
-        adjustment_properties = Params.parse(adjustment_properties, {
+        row.add_suffix(item);
+
+        return row;
+    }
+
+    add_spin(label, key, adjustment_properties, spin_properties) {
+        let final_adjustment_properties = Object.assign({
             lower: 0,
             upper: 100,
             step_increment: 100
-        });
-        let adjustment = new Gtk.Adjustment(adjustment_properties);
+        }, adjustment_properties);
+        let adjustment = new Gtk.Adjustment(final_adjustment_properties);
 
-        spin_properties = Params.parse(spin_properties, {
+        let final_spin_properties = Object.assign({
             adjustment: adjustment,
             numeric: true,
-            snap_to_ticks: true
-        }, true);
-        let spin_button = new Gtk.SpinButton(spin_properties);
+            snap_to_ticks: true,
+            valign: Gtk.Align.CENTER
+        }, spin_properties);
+        let spin_button = new Gtk.SpinButton(final_spin_properties);
         let that = this;
 
-        spin_button.set_value(this._settings.get_int(key));
+        spin_button.set_value(this.#settings.get_int(key));
         spin_button.connect('value-changed', function(spin) {
             let value = spin.get_value_as_int();
 
-            if(that._settings.get_int(key) !== value) {
-                that._settings.set_int(key, value);
+            if(that.#settings.get_int(key) !== value) {
+                that.#settings.set_int(key, value);
             }
         });
 
-        return this.add_row(label, spin_button, true);
-    },
-
-    add_row: function(text, widget, wrap) {
-        let label = new Gtk.Label({
-            label: text,
-            hexpand: true,
-            halign: Gtk.Align.START
-        });
-        if (isGtk4) {
-            label.set_wrap(wrap || false);
-        } else {
-            label.set_line_wrap(wrap || false);
-        }
-
-        this.attach(label, 0, this._rownum, 1, 1); // col, row, colspan, rowspan
-        this.attach(widget, 1, this._rownum, 1, 1);
-        this._rownum++;
-
-        return widget;
-    },
-
-    add_item: function(widget, col, colspan, rowspan) {
-        this.attach(
-            widget,
-            col || 0,
-            this._rownum,
-            colspan || 2,
-            rowspan || 1
-        );
-        this._rownum++;
-
-        return widget;
-    },
-
-    add_range: function(label, key, range_properties) {
-        range_properties = Params.parse(range_properties, {
-            min: 0,
-            max: 100,
-            step: 10,
-            mark_position: 0,
-            add_mark: false,
-            size: 200,
-            draw_value: true
+        let row = new Adw.ActionRow({
+            title: label,
+            activatable: true
         });
 
-        let range = Gtk.Scale.new_with_range(
-            Gtk.Orientation.HORIZONTAL,
-            range_properties.min,
-            range_properties.max,
-            range_properties.step
-        );
-        let that = this;
+        row.add_suffix(spin_button);
 
-        range.set_value(this._settings.get_int(key));
-        range.set_draw_value(range_properties.draw_value);
-
-        if(range_properties.add_mark) {
-            range.add_mark(
-                range_properties.mark_position,
-                Gtk.PositionType.BOTTOM,
-                null
-            );
-        }
-
-        range.set_size_request(range_properties.size, -1);
-
-        range.connect('value-changed', function(slider) {
-            that._settings.set_int(key, slider.get_value());
-        });
-
-        return this.add_row(label, range, true);
+        return row;
     }
-});
+}
 
-const SystemMonitorPrefsWidget = new GObject.Class({
-    Name: 'SystemMonitor.Prefs.Widget',
-    GTypeName: 'SystemMonitorPrefsWidget',
-    Extends: Gtk.Box,
+class UserInterfaceBuilder {
+    #window;
+    #widgetBuilder;
 
-    _init: function(params) {
-        this.parent(params);
-        this.set_orientation(Gtk.Orientation.VERTICAL);
-        this._settings = imports.misc.extensionUtils.getSettings();
+    constructor(window, widgetBuilder) {
+        this.#window = window;
+        this.#widgetBuilder = widgetBuilder;
+    }
 
-        let stack = new Gtk.Stack({
-            transition_type: Gtk.StackTransitionType.SLIDE_LEFT_RIGHT,
-            transition_duration: 500
+    build() {
+        this.#window.add(this.#createGeneralPage());
+        this.#window.add(this.#createMemoryPage());
+    }
+
+    #createGeneralPage(widgetBuilder) {
+        let generalPage = new Page(_('General'), 'preferences-system-symbolic');
+
+        let timerGroup = new Adw.PreferencesGroup({
+            title: _('Timer')
         });
-
-        let stack_switcher = isGtk4
-            ? new Gtk.StackSwitcher({
-                margin_start: 5,
-                margin_top: 5,
-                margin_bottom: 5,
-                margin_end: 5,
-                stack: stack
-            })
-            : new Gtk.StackSwitcher({
-                margin_left: 5,
-                margin_top: 5,
-                margin_bottom: 5,
-                margin_right: 5,
-                stack: stack
-            });
-
-        this._init_stack(stack);
-
-        if (isGtk4) {
-            this.append(stack_switcher);
-            this.append(stack);
-        } else {
-            this.add(stack_switcher);
-            this.add(stack);
-        }
-    },
-
-    _get_tab_config: function() {
-        let pages = [
-            {
-                name: 'General',
-                page: this._createGeneralPage()
-            },
-            {
-                name: 'Memory',
-                page: this._createMemoryPage()
-            }
-        ];
-
-        return pages;
-    },
-
-    _createGeneralPage: function() {
-        let general_page = new PagePrefsGrid();
-        general_page.add_spin('Refresh interval in seconds.', PrefsKeys.REFRESH_INTERVAL, {
+        timerGroup.add(this.#widgetBuilder.add_spin('Refresh interval in seconds.', PrefsKeys.REFRESH_INTERVAL, {
             lower: 1,
             upper: 10,
             step_increment: 1
+        }));
+        generalPage.add(timerGroup);
+
+
+        let layoutGroup = new Adw.PreferencesGroup({
+            title: _('Layout')
         });
-        general_page.add_combo('Position on top bar.', PrefsKeys.POSITION, [
+        layoutGroup.add(this.#widgetBuilder.add_combo('Position on top bar.', PrefsKeys.POSITION, [
             { "title": "Left side", "value": "left" },
             { "title": "Center", "value": "center" },
             { "title": "Right side", "value": "right" }
-        ], 'string');
-        general_page.add_combo('Layout of drop-down information panel.', PrefsKeys.LAYOUT, [
+        ], 'string'));
+        layoutGroup.add(this.#widgetBuilder.add_combo('Layout of drop-down information panel.', PrefsKeys.LAYOUT, [
             { "title": "Horizontal", "value": "horizontal" },
             { "title": "Vertical", "value": "vertical" }
-        ], 'string');
-        general_page.add_boolean('Show activity on top bar.', PrefsKeys.SHOW_ACTIVITY);
-        general_page.add_boolean('Enable CPU indicator.', PrefsKeys.CPU_METER);
-        general_page.add_boolean('Enable memory indicator.', PrefsKeys.MEMORY_METER);
-        general_page.add_boolean('Enable disk indicator.', PrefsKeys.STORAGE_METER);
-        general_page.add_boolean('Enable network indicator.', PrefsKeys.NETWORK_METER);
-        general_page.add_boolean('Enable swap indicator.', PrefsKeys.SWAP_METER);
-        general_page.add_boolean('Enable system load indicator.', PrefsKeys.LOAD_METER);
-        return general_page;
-    },
+        ], 'string'));
+        generalPage.add(layoutGroup);
 
-    _createMemoryPage: function() {
-        let memory_page = new PagePrefsGrid();
-        memory_page.add_combo('Memory calculation method for process list sorting.', PrefsKeys.MEMORY_CALCULATION_METHOD, [
+        let visibilityGroup = new Adw.PreferencesGroup({
+            title: _('Visibility')
+        });
+        visibilityGroup.add(this.#widgetBuilder.add_boolean('Show activity on top bar.', PrefsKeys.SHOW_ACTIVITY));
+        visibilityGroup.add(this.#widgetBuilder.add_boolean('Enable CPU indicator.', PrefsKeys.CPU_METER));
+        visibilityGroup.add(this.#widgetBuilder.add_boolean('Enable memory indicator.', PrefsKeys.MEMORY_METER));
+        visibilityGroup.add(this.#widgetBuilder.add_boolean('Enable disk indicator.', PrefsKeys.STORAGE_METER));
+        visibilityGroup.add(this.#widgetBuilder.add_boolean('Enable network indicator.', PrefsKeys.NETWORK_METER));
+        visibilityGroup.add(this.#widgetBuilder.add_boolean('Enable swap indicator.', PrefsKeys.SWAP_METER));
+        visibilityGroup.add(this.#widgetBuilder.add_boolean('Enable system load indicator.', PrefsKeys.LOAD_METER));
+        generalPage.add(visibilityGroup);
+
+        return generalPage;
+    }
+
+    #createMemoryPage() {
+        let memoryPage = new Page(_('Memory'), 'accessories-calculator-symbolic');
+
+        let calculationGroup = new Adw.PreferencesGroup({
+            title: _('Calculation')
+        });
+        calculationGroup.add(this.#widgetBuilder.add_combo('Memory calculation method for process list sorting.', PrefsKeys.MEMORY_CALCULATION_METHOD, [
             { "title": "RAM only", "value": "ram_only" },
             { "title": "All memory", "value": "all" }
-        ], 'string');
-        return memory_page;
-    },
+        ], 'string'));
+        memoryPage.add(calculationGroup);
 
-    _init_stack: function(stack) {
-        let config = this._get_tab_config();
-        for (let index in config) {
-            stack.add_titled(config[index].page, config[index].name, config[index].name);
-        }
+        return memoryPage;
     }
-});
-
-function init() {
-
 }
 
-function buildPrefsWidget() {
-    let widget = new SystemMonitorPrefsWidget();
+export default class SystemMonitorExtensionPreferences extends ExtensionPreferences {
+    fillPreferencesWindow(window) {
+        let widgetBuilder = new WidgetBuilder(this.getSettings());
+        let interfaceBuilder = new UserInterfaceBuilder(window, widgetBuilder);
 
-    if (!isGtk4) {
-        widget.show_all();
+        interfaceBuilder.build();
     }
-
-    return widget;
 }
