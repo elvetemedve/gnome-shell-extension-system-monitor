@@ -12,13 +12,14 @@ import * as PrefsKeys from './prefs_keys.js';
 
 export const Menu = GObject.registerClass(
 class Menu extends PanelMenu.Button {
-    _init() {
+    constructor(extensionObject, settings) {
         let menuAlignment = 0.5;
-        let extensionObject = Extension.lookupByURL(import.meta.url);
-        super._init(menuAlignment);
+
+        super(menuAlignment);
 
         this._layout = new St.BoxLayout();
-        this._settings = extensionObject.getSettings();
+        this._settings = settings;
+        this._extensionObject = extensionObject;
         this._icons = {};
         this._meters = {};
         this._meter_widgets = {};
@@ -94,7 +95,7 @@ class Menu extends PanelMenu.Button {
     }
     _createIcon(type) {
         let can_show_activity = this._settings.get_boolean(PrefsKeys.SHOW_ACTIVITY);
-        let icon = FactoryModule.AbstractFactory.create('icon', type, {}, can_show_activity);
+        let icon = FactoryModule.AbstractFactory.create('icon', type, {}, can_show_activity, this._extensionObject);
         let meter = this._meters[type];
 
         if (meter == undefined) {
@@ -120,7 +121,7 @@ class Menu extends PanelMenu.Button {
         meter.addObserver(icon);
         this._layout.insert_child_at_index(icon, this.available_meters.indexOf(type));
         this._icons[type] = icon;
-        return FactoryModule.AbstractFactory.create('icon', type, {}, can_show_activity);
+        return FactoryModule.AbstractFactory.create('icon', type, {}, can_show_activity, this._extensionObject);
     }
     _destroyIcon(type) {
         let icon = this._icons[type];

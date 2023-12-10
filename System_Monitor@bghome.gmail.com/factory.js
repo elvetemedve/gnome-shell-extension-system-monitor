@@ -56,7 +56,7 @@ IconFactory.prototype.concreteClass = IndicatorModule.Icon;
 // Create an indicator icon object, options will be passed to the real object's constructor.
 //
 // For working with themed icons see http://standards.freedesktop.org/icon-theme-spec/icon-theme-spec-latest.html
-IconFactory.prototype.create = function(type, options, can_show_activity) {
+IconFactory.prototype.create = function(type, options, can_show_activity, extensionObject) {
 	let default_options = {
 		style_class: 'system-status-icon system-monitor-icon',
 		reactive: true,
@@ -65,7 +65,6 @@ IconFactory.prototype.create = function(type, options, can_show_activity) {
 	}
 
 	let constructor_options = Object.assign(default_options, options);
-	let extensionObject = Extension.lookupByURL(import.meta.url);
 
 	if (type == PrefsKeys.STORAGE_METER) {
 		constructor_options.icon_name = 'drive-harddisk-symbolic';
