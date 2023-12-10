@@ -8,9 +8,9 @@ import * as View from './view.js';
 import * as PrefsKeys from './prefs_keys.js';
 
 const Timer = class {
-    constructor(params) {
-        this._settings = params.settings;
-        this._view = params.view;
+    constructor(view, settings) {
+        this._settings = settings;
+        this._view = view;
     }
 
     start(update_interval) {
@@ -42,6 +42,7 @@ const Timer = class {
     }
 
     destroy() {
+        this.stop();
         this._view.destroy();
         this._settings = null;
         this._view = null;
@@ -52,12 +53,12 @@ export default class SystemMonitorExtension extends Extension {
     #timer;
 
     enable() {
-        this.#timer = new Timer({view: new View.Menu({settings: this.getSettings()}), settings: this.getSettings()});
+        let settings = this.getSettings();
+        this.#timer = new Timer(new View.Menu(this, settings), settings);
         this.#timer.start();
     }
 
     disable() {
-        this.#timer.stop();
         this.#timer.destroy();
         this.#timer = null;
     }

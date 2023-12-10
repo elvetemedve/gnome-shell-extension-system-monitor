@@ -254,7 +254,6 @@ StopWatch.prototype.printElapsed = function (name) {
 export const logError = function(error) {
     let sourceFile = error.fileName;
     let sourceLine = error.lineNumber;
-    let extensionObject = Extension.lookupByURL(import.meta.url);
 
-    console.error(`Extension ${extensionObject.metadata.uuid}: "${error}" ${sourceFile}:${sourceLine}`);
+    console.error(`Extension System_Monitor@bghome.gmail.com: "${error}" ${sourceFile}:${sourceLine}`);
 };
