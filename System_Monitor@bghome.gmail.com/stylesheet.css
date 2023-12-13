@@ -26,3 +26,7 @@
 .meter-area-container {
     background-color: inherit;
 }
+
+.item-label {
+    max-width: 16em;
+}
