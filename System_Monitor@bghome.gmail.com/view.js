@@ -38,7 +38,7 @@ class Menu extends PanelMenu.Button {
                 }
             }
         });
-        this.add_actor(this._layout);
+        this.add_child(this._layout);
 
         this._initIconsAndWidgets();
         this._addPositionSettingChangedHandler();

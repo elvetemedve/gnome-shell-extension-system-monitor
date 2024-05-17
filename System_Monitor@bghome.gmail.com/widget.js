@@ -91,7 +91,7 @@ class BaseMenuItem extends PopupMenu.PopupBaseMenuItem {
         }
 
         if (position != -1) {
-            this.actor.remove_actor(this.icon);
+            this.actor.remove_child(this.icon);
             this.icon = icon;
             this.actor.insert_child_at_index(this.icon, position);
         }
@@ -141,13 +141,13 @@ class ResourceTitleItem extends St.Widget {
             style_class: 'resource-title'
         });
 
-        this.add_actor(icon);
+        this.add_child(icon);
 
         let leftLabel = new St.Label({text: text, style_class: 'resource-title-label', x_expand: true, y_expand: true, x_align: Clutter.ActorAlign.START, y_align: Clutter.ActorAlign.CENTER});
-        this.add_actor(leftLabel);
+        this.add_child(leftLabel);
 
         this.#rightLabel = new St.Label({text: summary_text, style_class: 'resource-title-label', x_expand: true, y_expand: true, x_align: Clutter.ActorAlign.END, y_align: Clutter.ActorAlign.CENTER});
-        this.add_actor(this.#rightLabel);
+        this.add_child(this.#rightLabel);
     }
 
     setSummaryText(text) {
