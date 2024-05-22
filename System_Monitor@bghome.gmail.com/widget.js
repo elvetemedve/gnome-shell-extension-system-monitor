@@ -304,7 +304,7 @@ class MeterAreaContainer extends PopupMenu.PopupBaseMenuItem {
             throw new TypeError("First argument of addMeter() method must be instance of MeterContainer.");
         }
         if (position == undefined) {
-            this.actor.add_actor(meter);
+            this.actor.add_child(meter);
         } else {
             this.actor.insert_child_at_index(meter, position);
         }
@@ -313,7 +313,7 @@ class MeterAreaContainer extends PopupMenu.PopupBaseMenuItem {
         if (!meter instanceof MeterContainer) {
             throw new TypeError("First argument of removeMeter() method must be instance of MeterContainer.");
         }
-        this.actor.remove_actor(meter);
+        this.actor.remove_child(meter);
     }
 });
 
@@ -345,7 +345,7 @@ class MeterContainer extends St.BoxLayout {
         this._menu_items.length = 0;
     }
     freeze() {
-        this.natural_width = this.width;
+        this.natural_width = Math.max(this.width, this.min_width);
         this.natural_width_set = true;
     }
     unfreeze() {

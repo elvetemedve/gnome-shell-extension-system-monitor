@@ -126,7 +126,7 @@ class Menu extends PanelMenu.Button {
     _destroyIcon(type) {
         let icon = this._icons[type];
         this._meters[type].removeObserver(icon);
-        this._layout.remove_actor(icon);
+        this._layout.remove_child(icon);
         icon.destroy();
         delete this._icons[type];
         delete this._meters[type];
