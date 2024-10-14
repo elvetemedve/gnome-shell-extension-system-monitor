@@ -66,7 +66,7 @@ task :uninstall, [:target] do |t, args|
 		raise "Unknown option for target '#{args.target}'."
 	end
 
-	if File.exists? "#{target_dir}/#{PACKAGE_NAME}"
+	if File.exist? "#{target_dir}/#{PACKAGE_NAME}"
 		rm_r "#{target_dir}/#{PACKAGE_NAME}"
 		puts message
 	end
@@ -75,7 +75,7 @@ end
 
 desc "Clean up build artifacts"
 task :cleanup do
-	if File.exists? BUILD_DIRECTORY
+	if File.exist? BUILD_DIRECTORY
 		rm_r BUILD_DIRECTORY
 	end
 	puts "Project is clean"
