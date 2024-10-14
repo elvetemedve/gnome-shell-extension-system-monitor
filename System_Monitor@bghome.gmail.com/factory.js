@@ -84,14 +84,14 @@ IconFactory.prototype.create = function(type, options, can_show_activity, extens
 		throw new RangeError('Unknown indicator type "' + type + '" given.');
 	}
 
-    let range = [
-        { red:190, green: 190, blue: 190 },
-        { red:255, green: 204, blue: 0 },
-        { red:255, green: 0, blue: 0 }
+    let color_range = [
+        new Util.Color(190, 190, 190),
+        new Util.Color(255, 204, 0),
+        new Util.Color(255, 0, 0)
     ];
 	let caution_class = 'indicator-caution';
 
-	return new IconFactory.prototype.concreteClass(constructor_options, range, caution_class, can_show_activity);
+	return new IconFactory.prototype.concreteClass(constructor_options, color_range, caution_class, can_show_activity);
 };
 
 AbstractFactory.registerObject('icon', IconFactory);

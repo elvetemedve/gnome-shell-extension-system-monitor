@@ -9,6 +9,34 @@ import * as Util from 'resource:///org/gnome/shell/misc/util.js';
 import * as FactoryModule from './factory.js';
 import * as AsyncModule from './helpers/async.js';
 
+export class Color {
+    #r;
+    #g;
+    #b;
+
+    constructor (red, green, blue) {
+        this.#r = red;
+        this.#g = green;
+        this.#b = blue;
+    }
+
+    interpolate(color, ratio) {
+        // Ensure the ratio is between 0 and 1
+        ratio = Math.max(0, Math.min(1, ratio));
+
+        // Interpolate each color channel
+        let r = Math.round(this.#r + ratio * (color.#r - this.#r));
+        let g = Math.round(this.#g + ratio * (color.#g - this.#g));
+        let b = Math.round(this.#b + ratio * (color.#b - this.#b));
+
+        return new Color(r, g, b);
+    }
+
+    toString() {
+        return `rgb(${this.#r},${this.#g},${this.#b})`;
+    }
+}
+
 export class Process {
     constructor(id) {
         this._id = id;
