@@ -1,30 +1,19 @@
 "use strict";
 
-import Clutter from 'gi://Clutter';
+import * as Util from './util.js';
+
 import GObject from 'gi://GObject';
 import St from 'gi://St';
 
 export const Icon = GObject.registerClass(
 class Icon extends St.Icon {
-    _init(options, colors, caution_class, can_show_activity) {
+    _init(options, color_range, caution_class, can_show_activity) {
         super._init(options);
-        this.initColorRange(colors);
+        this.color_range = color_range;
         this.initCautionClass(caution_class);
         this.initCanShowActivity(can_show_activity);
     }
 });
-
-// Take an array of color defined by RGB components and set it static.
-Icon.prototype.initColorRange = function(colors) {
-    if (!this.color_range) {
-        this.color_range = [];
-    }
-    if (this.color_range.length == 0) {
-		for (let i in colors) {
-			this.color_range.push(new Clutter.Color(colors[i]));
-		}
-	}
-}
 
 // Set static CSS class name.
 Icon.prototype.initCautionClass = function(name) {
@@ -47,20 +36,17 @@ Icon.prototype.setProgress = function(percent) {
 		return this;
 	}
 
-	var split_value = (this.color_range.length - 1) * percent / 100;
-	var progress = split_value == this.color_range.length -1 ? 1 : split_value % 1;
+	let ratio = percent / 100;
+	let split_value = (this.color_range.length - 1) * ratio;
+	let progress = split_value == this.color_range.length -1 ? 1 : split_value % 1;
 	if (split_value == Math.round(split_value)) {
 		split_value += split_value + 0.1 < this.color_range.length - 1 ? 0.1 : -0.1;
 	}
-	var initial_color = this.color_range[Math.floor(split_value)];
-	var final_color = this.color_range[Math.ceil(split_value)];
-	var color = initial_color.interpolate(final_color, progress);
+	let initial_color = this.color_range[Math.floor(split_value)];
+	let final_color = this.color_range[Math.ceil(split_value)];
+	let color = initial_color.interpolate(final_color, ratio);
 
-	this.style = 'color: rgb(' +
-		color.red + ',' +
-		color.green + ',' +
-		color.blue +
-		');';
+	this.style = `color: ${color.toString()}`;
 
 	return this;
 };
