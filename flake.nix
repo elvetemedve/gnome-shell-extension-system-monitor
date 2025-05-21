@@ -22,7 +22,10 @@
       ];
 
       shellHook = ''
-        echo "Dev shell started"
+        export RUBYOPT=-W0 # Disable Ruby warnings
+        echo "DEV Shell Started"
+        echo ""
+        exec fish -C "rake"
       '';
     };
   };
