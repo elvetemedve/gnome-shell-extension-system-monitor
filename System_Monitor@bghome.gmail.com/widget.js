@@ -294,26 +294,72 @@ class InterfaceItem extends BaseMenuItem {
 
 export const MeterAreaContainer = GObject.registerClass(
 class MeterAreaContainer extends PopupMenu.PopupBaseMenuItem {
-    constructor() {
-        super({
+    _init() {
+        super._init({
             style_class: "meter-area-container"
         });
+
+        this._scrollView = new St.ScrollView({
+            hscrollbar_policy: St.PolicyType.AUTOMATIC,
+            vscrollbar_policy: St.PolicyType.AUTOMATIC,
+            enable_mouse_scrolling: true,
+            overlay_scrollbars: true,
+            style_class: 'vfade',
+            x_expand: true,
+            y_expand: true
+        });
+
+        this._contentBox = new St.BoxLayout({
+            vertical: false,
+            x_expand: true,
+            y_expand: true
+        });
+
+        this._scrollView.set_child(this._contentBox);
+        this.actor.add_child(this._scrollView);
+
+        this._mappedId = this.actor.connect('notify::mapped', () => {
+            if (this.actor.mapped) {
+                this._updateScrollViewSize();
+            }
+        });
     }
+
+    _updateScrollViewSize() {
+        let [x, y] = this.actor.get_transformed_position();
+        let monitorIndex = Main.layoutManager.findIndexForLocation(x, y);
+        if (monitorIndex < 0) {
+            monitorIndex = Main.layoutManager.primaryIndex;
+        }
+
+        let workArea = Main.layoutManager.getWorkAreaForMonitor(monitorIndex);
+
+        let maxWidth = Math.floor(workArea.width * 0.9);
+        let maxHeight = Math.floor(workArea.height * 0.75);
+
+        this._scrollView.set_style(
+            `max-width: ${maxWidth}px; max-height: ${maxHeight}px; min-width: 200px;`
+        );
+    }
+
     addMeter(meter, position) {
-        if (!meter instanceof MeterContainer) {
-            throw new TypeError("First argument of addMeter() method must be instance of MeterContainer.");
-        }
         if (position == undefined) {
-            this.actor.add_child(meter);
+            this._contentBox.add_child(meter);
         } else {
-            this.actor.insert_child_at_index(meter, position);
+            this._contentBox.insert_child_at_index(meter, position);
         }
     }
+
     removeMeter(meter) {
-        if (!meter instanceof MeterContainer) {
-            throw new TypeError("First argument of removeMeter() method must be instance of MeterContainer.");
+        this._contentBox.remove_child(meter);
+    }
+
+    destroy() {
+        if (this._mappedId) {
+            this.actor.disconnect(this._mappedId);
+            this._mappedId = null;
         }
-        this.actor.remove_child(meter);
+        super.destroy();
     }
 });
 
