@@ -370,6 +370,15 @@ class MeterAreaContainer extends PopupMenu.PopupBaseMenuItem {
     removeMeter(meter) {
         this._contentBox.remove_child(meter);
     }
+
+    destroy() {
+        if (this._mappedId) {
+            this.actor.disconnect(this._mappedId);
+            this._mappedId = null;
+        }
+        this._contentBox.remove_child(meter);
+        super.destroy();
+    }
 });
 
 const MeterContainer = GObject.registerClass(
