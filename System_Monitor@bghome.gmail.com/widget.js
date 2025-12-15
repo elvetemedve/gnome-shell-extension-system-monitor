@@ -359,6 +359,7 @@ class MeterAreaContainer extends PopupMenu.PopupBaseMenuItem {
             this.actor.disconnect(this._mappedId);
             this._mappedId = null;
         }
+        this._contentBox.remove_child(meter);
         super.destroy();
     }
 });
