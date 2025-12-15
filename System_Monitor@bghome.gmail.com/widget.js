@@ -317,29 +317,46 @@ class MeterAreaContainer extends PopupMenu.PopupBaseMenuItem {
 
         this._scrollView.set_child(this._contentBox);
         this.actor.add_child(this._scrollView);
-
-        this._mappedId = this.actor.connect('notify::mapped', () => {
-            if (this.actor.mapped) {
-                this._updateScrollViewSize();
-            }
-        });
     }
 
-    _updateScrollViewSize() {
-        let [x, y] = this.actor.get_transformed_position();
-        let monitorIndex = Main.layoutManager.findIndexForLocation(x, y);
-        if (monitorIndex < 0) {
-            monitorIndex = Main.layoutManager.primaryIndex;
+    _getMaxDimensions() {
+        let monitorIndex = Main.layoutManager.primaryIndex;
+
+        // Try to get the monitor where the actor is located
+        if (this.actor.mapped) {
+            let [x, y] = this.actor.get_transformed_position();
+            let idx = Main.layoutManager.findIndexForLocation(x, y);
+            if (idx >= 0) {
+                monitorIndex = idx;
+            }
         }
 
         let workArea = Main.layoutManager.getWorkAreaForMonitor(monitorIndex);
 
-        let maxWidth = Math.floor(workArea.width * 0.9);
-        let maxHeight = Math.floor(workArea.height * 0.75);
+        return {
+            maxWidth: Math.floor(workArea.width * 0.9),
+            maxHeight: Math.floor(workArea.height * 0.75)
+        };
+    }
 
-        this._scrollView.set_style(
-            `max-width: ${maxWidth}px; max-height: ${maxHeight}px; min-width: 200px;`
-        );
+    vfunc_get_preferred_width(forHeight) {
+        let [minWidth, natWidth] = super.vfunc_get_preferred_width(forHeight);
+        let { maxWidth } = this._getMaxDimensions();
+
+        return [
+            Math.min(minWidth, maxWidth),
+            Math.min(natWidth, maxWidth)
+        ];
+    }
+
+    vfunc_get_preferred_height(forWidth) {
+        let [minHeight, natHeight] = super.vfunc_get_preferred_height(forWidth);
+        let { maxHeight } = this._getMaxDimensions();
+
+        return [
+            Math.min(minHeight, maxHeight),
+            Math.min(natHeight, maxHeight)
+        ];
     }
 
     addMeter(meter, position) {
