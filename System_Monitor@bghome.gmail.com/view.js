@@ -28,7 +28,7 @@ class Menu extends PanelMenu.Button {
         this._indicator_sort_order = 1;
         this.available_meters = [PrefsKeys.CPU_METER, PrefsKeys.MEMORY_METER, PrefsKeys.STORAGE_METER, PrefsKeys.NETWORK_METER, PrefsKeys.SWAP_METER, PrefsKeys.LOAD_METER];
         this._widget_area_container = FactoryModule.AbstractFactory.create('meter-area-widget');
-        this._widget_area_container.actor.orientation = this._settings.get_string(PrefsKeys.LAYOUT) === 'vertical' ? Clutter.Orientation.VERTICAL : Clutter.Orientation.HORIZONTAL;
+        this._widget_area_container._contentBox.orientation = this._settings.get_string(PrefsKeys.LAYOUT) === 'vertical' ? Clutter.Orientation.VERTICAL : Clutter.Orientation.HORIZONTAL;
         this.menu.addMenuItem(this._widget_area_container);
         this._open_state_change_id = this.menu.connect('open-state-changed', (menu, is_open) => {
             for (let type in this._meter_widgets) {
@@ -157,7 +157,7 @@ class Menu extends PanelMenu.Button {
         let that = this;
         let event_id = this._settings.connect('changed::' + PrefsKeys.LAYOUT, function(settings, key) {
             let orientation = 'vertical' === settings.get_string(key) ? Clutter.Orientation.VERTICAL : Clutter.Orientation.HORIZONTAL;
-            that._widget_area_container.actor.orientation = orientation;
+            that._widget_area_container._contentBox.orientation = orientation;
         });
         this._event_handler_ids.push(event_id);
     }

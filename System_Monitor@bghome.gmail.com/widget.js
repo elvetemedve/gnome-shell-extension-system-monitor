@@ -295,66 +295,72 @@ class InterfaceItem extends BaseMenuItem {
 export const MeterAreaContainer = GObject.registerClass(
 class MeterAreaContainer extends PopupMenu.PopupBaseMenuItem {
     _init() {
-        console.log('DEBUG: A');
-        super._init();
+        super._init({
+            style_class: "meter-area-container"
+        });
 
-        console.log('DEBUG: B');
         this._scrollView = new St.ScrollView({
             hscrollbar_policy: St.PolicyType.AUTOMATIC,
             vscrollbar_policy: St.PolicyType.AUTOMATIC,
             enable_mouse_scrolling: true,
             overlay_scrollbars: true,
-            style_class: 'vfade'
+            style_class: 'vfade',
+            x_expand: true,
+            y_expand: true
         });
-        
-        console.log('DEBUG: C');
 
-        // Create a container for your actual content
         this._contentBox = new St.BoxLayout({
             vertical: false,
-            x_expand: false,
-            y_expand: false,
-            style_class: 'system-monitor-content'
+            x_expand: true,
+            y_expand: true
         });
 
-        console.log('DEBUG: D');
-        this._scrollView.add_actor(this._contentBox);
+        this._scrollView.set_child(this._contentBox);
         this.actor.add_child(this._scrollView);
 
-        console.log('DEBUG: E');
-        this.actor.connect('notify::mapped', () => {
-            console.log('DEBUG: event handler for notify:mapped');
-            console.log('DEBUG: is mapped', this.actor.mapped);
+        this._mappedId = this.actor.connect('notify::mapped', () => {
             if (this.actor.mapped) {
-                // Get the primary monitor (or the monitor the menu is on)
-                let monitor = Main.layoutManager.primaryMonitor;
-        
-                // Calculate max width (e.g., screen width minus some padding)
-                let maxWidth = monitor.width - 100;
-
-                // Apply the width to the ScrollView
-                // This prevents the "assertion width > 0" error because we explicitly 
-                // give it a size before it tries to paint the viewport.
-                this._scrollView.set_style(`max-width: ${maxWidth}px; min-width: 300px;`);
-                console.log(`DEBUG: set scrollView style max-width to ${maxWidth}`);
+                this._updateScrollViewSize();
             }
         });
     }
-    addMeter(meter, position) {
-        if (!meter instanceof MeterContainer) {
-            throw new TypeError("First argument of addMeter() method must be instance of MeterContainer.");
+
+    _updateScrollViewSize() {
+        let [x, y] = this.actor.get_transformed_position();
+        let monitorIndex = Main.layoutManager.findIndexForLocation(x, y);
+        if (monitorIndex < 0) {
+            monitorIndex = Main.layoutManager.primaryIndex;
         }
+
+        let workArea = Main.layoutManager.getWorkAreaForMonitor(monitorIndex);
+
+        let maxWidth = Math.floor(workArea.width * 0.9);
+        let maxHeight = Math.floor(workArea.height * 0.75);
+
+        this._scrollView.set_style(
+            `max-width: ${maxWidth}px; max-height: ${maxHeight}px; min-width: 200px;`
+        );
+    }
+
+    addMeter(meter, position) {
         if (position == undefined) {
             this._contentBox.add_child(meter);
         } else {
             this._contentBox.insert_child_at_index(meter, position);
         }
     }
+
     removeMeter(meter) {
-        if (!meter instanceof MeterContainer) {
-            throw new TypeError("First argument of removeMeter() method must be instance of MeterContainer.");
+        this._contentBox.remove_child(meter);
+    }
+
+    destroy() {
+        if (this._mappedId) {
+            this.actor.disconnect(this._mappedId);
+            this._mappedId = null;
         }
         this._contentBox.remove_child(meter);
+        super.destroy();
     }
 });
 
