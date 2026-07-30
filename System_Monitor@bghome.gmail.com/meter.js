@@ -446,11 +446,15 @@ export const NetworkMeter = function(options) {
 						});
 					}).catch(e => {
 						console.error('Network Meter load data failed: ' + e);
+						return {};
 					});
 				}
 			};
 			for (let device_name of files) {
-				let promise = FactoryModule.AbstractFactory.create('file', this, '/sys/class/net/' + device_name + '/type').read().then(new callback(device_name));
+				let promise = FactoryModule.AbstractFactory.create('file', this, '/sys/class/net/' + device_name + '/type')
+					.read()
+					.then(new callback(device_name))
+					.catch(() => ({})); // non-interface entry (e.g. bonding_masters): skip silently
 				device_names.push(device_name);
 				promises.push(promise);
 			}
