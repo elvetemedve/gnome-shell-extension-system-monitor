@@ -308,14 +308,10 @@ class MeterAreaContainer extends PopupMenu.PopupBaseMenuItem {
         } else {
             this._scroll_view.add_actor(this._meter_box);
         }
-        // vscrollbar is always off; hscrollbar policy is driven explicitly by
-        // setMaxWidth() below rather than left on AUTOMATIC (see there for why).
-        if (this._scroll_view.set_policy) {
-            this._scroll_view.set_policy(St.PolicyType.NEVER, St.PolicyType.NEVER);
-        } else {
-            this._scroll_view.hscrollbar_policy = St.PolicyType.NEVER;
-            this._scroll_view.vscrollbar_policy = St.PolicyType.NEVER;
-        }
+        // Both scrollbars start off; policy is driven explicitly per axis by
+        // setMaxWidth()/setMaxHeight() below rather than left on AUTOMATIC
+        // (see there for why).
+        this._setScrollbarPolicy(St.PolicyType.NEVER, St.PolicyType.NEVER);
         this.actor.add_child(this._scroll_view);
     }
     setOrientation(orientation) {
@@ -323,6 +319,9 @@ class MeterAreaContainer extends PopupMenu.PopupBaseMenuItem {
     }
     getWidth() {
         return this._scroll_view.width;
+    }
+    getHeight() {
+        return this._scroll_view.height;
     }
     setMaxWidth(px) {
         // Always set an explicit width rather than relying on St.ScrollView's own
@@ -345,8 +344,13 @@ class MeterAreaContainer extends PopupMenu.PopupBaseMenuItem {
         let [, natural_width] = this._meter_box.get_preferred_width(-1);
         let needs_scroll = px && natural_width > px;
         this._scroll_view.width = needs_scroll ? px : natural_width;
+        // Reset the other axis to natural sizing: only one of setMaxWidth()/
+        // setMaxHeight() is in effect at a time (driven by the layout
+        // orientation), so a cap left over from the other one - e.g. from
+        // before a layout setting change - must not linger here.
+        this._scroll_view.height = -1;
 
-        // Drive the hscrollbar policy from our own overflow check instead of
+        // Drive the scrollbar policy from our own overflow check instead of
         // leaving it on AUTOMATIC: St.ScrollView's own "hide if nothing to
         // scroll" logic doesn't reliably re-run after we force this width -
         // measured directly, the scrollbar actor stayed visible even once the
@@ -354,10 +358,28 @@ class MeterAreaContainer extends PopupMenu.PopupBaseMenuItem {
         // with nothing left to scroll). We already know from natural_width vs.
         // px whether scrolling is actually needed, so use that instead of
         // relying on St to notice on its own.
+        this._setScrollbarPolicy(needs_scroll ? St.PolicyType.AUTOMATIC : St.PolicyType.NEVER, St.PolicyType.NEVER);
+    }
+    setMaxHeight(px) {
+        // Vertical counterpart of setMaxWidth() above, for when the meters are
+        // stacked in rows (vertical layout) instead of columns (horizontal
+        // layout): capped dimension is height, and it's the vscrollbar that's
+        // driven explicitly. See setMaxWidth() for the reasoning that applies
+        // equally here (hard actor size vs. natural-width-set/CSS, and driving
+        // the scrollbar policy ourselves instead of trusting AUTOMATIC).
+        let [, natural_height] = this._meter_box.get_preferred_height(-1);
+        let needs_scroll = px && natural_height > px;
+        this._scroll_view.height = needs_scroll ? px : natural_height;
+        this._scroll_view.width = -1;
+
+        this._setScrollbarPolicy(St.PolicyType.NEVER, needs_scroll ? St.PolicyType.AUTOMATIC : St.PolicyType.NEVER);
+    }
+    _setScrollbarPolicy(hscrollbar_policy, vscrollbar_policy) {
         if (this._scroll_view.set_policy) {
-            this._scroll_view.set_policy(needs_scroll ? St.PolicyType.AUTOMATIC : St.PolicyType.NEVER, St.PolicyType.NEVER);
+            this._scroll_view.set_policy(hscrollbar_policy, vscrollbar_policy);
         } else {
-            this._scroll_view.hscrollbar_policy = needs_scroll ? St.PolicyType.AUTOMATIC : St.PolicyType.NEVER;
+            this._scroll_view.hscrollbar_policy = hscrollbar_policy;
+            this._scroll_view.vscrollbar_policy = vscrollbar_policy;
         }
     }
     addMeter(meter, position) {

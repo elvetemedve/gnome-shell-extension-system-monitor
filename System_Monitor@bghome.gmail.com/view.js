@@ -28,7 +28,7 @@ class Menu extends PanelMenu.Button {
         this._indicator_sort_order = 1;
         this.available_meters = [PrefsKeys.CPU_METER, PrefsKeys.MEMORY_METER, PrefsKeys.STORAGE_METER, PrefsKeys.NETWORK_METER, PrefsKeys.SWAP_METER, PrefsKeys.LOAD_METER];
         this._widget_area_container = FactoryModule.AbstractFactory.create('meter-area-widget');
-        this._widget_area_container.setOrientation(this._settings.get_string(PrefsKeys.LAYOUT) === 'vertical' ? Clutter.Orientation.VERTICAL : Clutter.Orientation.HORIZONTAL);
+        this._widget_area_container.setOrientation(this._isVerticalLayout() ? Clutter.Orientation.VERTICAL : Clutter.Orientation.HORIZONTAL);
         this.menu.addMenuItem(this._widget_area_container);
         // The popup's actual on-screen position/size is only known once Clutter
         // has run a real layout pass - get_preferred_width() queried synchronously
@@ -39,6 +39,11 @@ class Menu extends PanelMenu.Button {
         // boxpointer arrow/border/padding chrome on top of our content) still
         // doesn't fit. Guarded so our own corrective resize - which triggers
         // another allocation - doesn't re-trigger itself.
+        //
+        // Which axis is capped depends on the layout setting: horizontal
+        // layout lays meters out in columns that can overflow the work area's
+        // width, vertical layout stacks them in rows that can instead overflow
+        // its height.
         this.menu.actor.connect('notify::allocation', () => {
             if (!this._pending_overflow_check) {
                 return;
@@ -49,9 +54,16 @@ class Menu extends PanelMenu.Button {
                 return;
             }
             let box = this.menu.actor.get_allocation_box();
-            let overflow = Math.max(work_area.x - box.x1, box.x2 - (work_area.x + work_area.width), 0);
-            if (overflow > 0) {
-                this._widget_area_container.setMaxWidth(this._widget_area_container.getWidth() - overflow);
+            if (this._isVerticalLayout()) {
+                let overflow = Math.max(work_area.y - box.y1, box.y2 - (work_area.y + work_area.height), 0);
+                if (overflow > 0) {
+                    this._widget_area_container.setMaxHeight(this._widget_area_container.getHeight() - overflow);
+                }
+            } else {
+                let overflow = Math.max(work_area.x - box.x1, box.x2 - (work_area.x + work_area.width), 0);
+                if (overflow > 0) {
+                    this._widget_area_container.setMaxWidth(this._widget_area_container.getWidth() - overflow);
+                }
             }
         });
         this._open_state_change_id = this.menu.connect('open-state-changed', (menu, is_open) => {
@@ -60,7 +72,11 @@ class Menu extends PanelMenu.Button {
                 let work_area = Main.layoutManager.getWorkAreaForMonitor(monitor_index);
                 this._open_work_area = work_area;
                 this._pending_overflow_check = true;
-                this._widget_area_container.setMaxWidth(work_area.width);
+                if (this._isVerticalLayout()) {
+                    this._widget_area_container.setMaxHeight(work_area.height);
+                } else {
+                    this._widget_area_container.setMaxWidth(work_area.width);
+                }
             }
             for (let type in this._meter_widgets) {
                 if (is_open) {
@@ -191,6 +207,9 @@ class Menu extends PanelMenu.Button {
             that._widget_area_container.setOrientation(orientation);
         });
         this._event_handler_ids.push(event_id);
+    }
+    _isVerticalLayout() {
+        return this._settings.get_string(PrefsKeys.LAYOUT) === 'vertical';
     }
     _addMemoryCalculationSettingChangedHandler() {
         let that = this;
