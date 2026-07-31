@@ -298,22 +298,83 @@ class MeterAreaContainer extends PopupMenu.PopupBaseMenuItem {
         super({
             style_class: "meter-area-container"
         });
+        this._meter_box = new St.BoxLayout();
+        this._scroll_view = new St.ScrollView({
+            style_class: "meter-area-scrollview"
+        });
+        // GNOME 45 uses add_actor(); GNOME 46+ replaced it with set_child().
+        if (this._scroll_view.set_child) {
+            this._scroll_view.set_child(this._meter_box);
+        } else {
+            this._scroll_view.add_actor(this._meter_box);
+        }
+        // vscrollbar is always off; hscrollbar policy is driven explicitly by
+        // setMaxWidth() below rather than left on AUTOMATIC (see there for why).
+        if (this._scroll_view.set_policy) {
+            this._scroll_view.set_policy(St.PolicyType.NEVER, St.PolicyType.NEVER);
+        } else {
+            this._scroll_view.hscrollbar_policy = St.PolicyType.NEVER;
+            this._scroll_view.vscrollbar_policy = St.PolicyType.NEVER;
+        }
+        this.actor.add_child(this._scroll_view);
+    }
+    setOrientation(orientation) {
+        this._meter_box.orientation = orientation;
+    }
+    getWidth() {
+        return this._scroll_view.width;
+    }
+    setMaxWidth(px) {
+        // Always set an explicit width rather than relying on St.ScrollView's own
+        // unconstrained preferred size, which is not guaranteed to equal the
+        // content's natural width (scroll views commonly default to a small
+        // baseline size instead of sizing to their child, requiring an explicit
+        // opt-in to do otherwise). Size to the content's own natural width when
+        // it fits - so the viewport matches the content exactly and no scrollbar
+        // appears - or to the clamped budget when it doesn't - so the viewport is
+        // smaller than the content and the columns stay full width and scrollable
+        // instead of being shrunk to fit.
+        //
+        // This must be a hard actor width, not a CSS max-width or St's
+        // natural-width-set: St.ScrollView implements its own get_preferred_width
+        // (to account for the child plus scrollbar), so it does not consult
+        // St.Widget's generic natural-width override, and a CSS max-width here
+        // would also cap the columns' own natural width instead of letting them
+        // overflow into the scrollable area. A hard Clutter width is enforced by
+        // ClutterActor before any subclass vfunc runs, so it always applies.
+        let [, natural_width] = this._meter_box.get_preferred_width(-1);
+        let needs_scroll = px && natural_width > px;
+        this._scroll_view.width = needs_scroll ? px : natural_width;
+
+        // Drive the hscrollbar policy from our own overflow check instead of
+        // leaving it on AUTOMATIC: St.ScrollView's own "hide if nothing to
+        // scroll" logic doesn't reliably re-run after we force this width -
+        // measured directly, the scrollbar actor stayed visible even once the
+        // adjustment's page-size caught up to equal its upper bound (i.e. even
+        // with nothing left to scroll). We already know from natural_width vs.
+        // px whether scrolling is actually needed, so use that instead of
+        // relying on St to notice on its own.
+        if (this._scroll_view.set_policy) {
+            this._scroll_view.set_policy(needs_scroll ? St.PolicyType.AUTOMATIC : St.PolicyType.NEVER, St.PolicyType.NEVER);
+        } else {
+            this._scroll_view.hscrollbar_policy = needs_scroll ? St.PolicyType.AUTOMATIC : St.PolicyType.NEVER;
+        }
     }
     addMeter(meter, position) {
         if (!meter instanceof MeterContainer) {
             throw new TypeError("First argument of addMeter() method must be instance of MeterContainer.");
         }
         if (position == undefined) {
-            this.actor.add_child(meter);
+            this._meter_box.add_child(meter);
         } else {
-            this.actor.insert_child_at_index(meter, position);
+            this._meter_box.insert_child_at_index(meter, position);
         }
     }
     removeMeter(meter) {
         if (!meter instanceof MeterContainer) {
             throw new TypeError("First argument of removeMeter() method must be instance of MeterContainer.");
         }
-        this.actor.remove_child(meter);
+        this._meter_box.remove_child(meter);
     }
 });
 
@@ -345,12 +406,20 @@ class MeterContainer extends St.BoxLayout {
         this._menu_items.length = 0;
     }
     freeze() {
-        this.natural_width = Math.max(this.width, this.min_width);
-        this.natural_width_set = true;
+        // Use a hard actor width, not St's natural-width/natural-width-set:
+        // that pair only overrides the *natural* component, while the
+        // *minimum* is still computed dynamically per for_height (labels here
+        // wrap, so less height means a larger required width). If the popup
+        // is later reflowed at a smaller height - e.g. boxpointer shrinking it
+        // to fit the screen - the frozen natural-width can end up below the
+        // newly computed minimum, which Clutter treats as a fatal error and
+        // crashes the whole shell. A hard width pins both min and natural to
+        // the same value for every for_height, so that can't happen.
+        let [min_width, natural_width] = this.get_preferred_width(-1);
+        this.width = Math.max(natural_width, min_width);
     }
     unfreeze() {
-        this.natural_width = 0;
-        this.natural_width_set = false;
+        this.width = -1;
     }
     update(state) {
         this._label_item.setSummaryText(Math.round(state.percent) + ' %');

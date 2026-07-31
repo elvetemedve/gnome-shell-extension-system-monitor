@@ -5,7 +5,7 @@ import GObject from 'gi://GObject';
 import St from 'gi://St';
 
 import {Extension} from 'resource:///org/gnome/shell/extensions/extension.js';
-import {panel as Panel} from 'resource:///org/gnome/shell/ui/main.js';
+import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 import * as PanelMenu from 'resource:///org/gnome/shell/ui/panelMenu.js';
 
 import * as FactoryModule from './factory.js';
@@ -28,9 +28,40 @@ class Menu extends PanelMenu.Button {
         this._indicator_sort_order = 1;
         this.available_meters = [PrefsKeys.CPU_METER, PrefsKeys.MEMORY_METER, PrefsKeys.STORAGE_METER, PrefsKeys.NETWORK_METER, PrefsKeys.SWAP_METER, PrefsKeys.LOAD_METER];
         this._widget_area_container = FactoryModule.AbstractFactory.create('meter-area-widget');
-        this._widget_area_container.actor.orientation = this._settings.get_string(PrefsKeys.LAYOUT) === 'vertical' ? Clutter.Orientation.VERTICAL : Clutter.Orientation.HORIZONTAL;
+        this._widget_area_container.setOrientation(this._settings.get_string(PrefsKeys.LAYOUT) === 'vertical' ? Clutter.Orientation.VERTICAL : Clutter.Orientation.HORIZONTAL);
         this.menu.addMenuItem(this._widget_area_container);
+        // The popup's actual on-screen position/size is only known once Clutter
+        // has run a real layout pass - get_preferred_width() queried synchronously
+        // right after we resize a descendant returns a stale cached value, not
+        // the post-resize size, so we can't predict the final geometry upfront.
+        // Instead, size for the work area optimistically, then correct after
+        // the fact against the real allocation if the popup (which adds its own
+        // boxpointer arrow/border/padding chrome on top of our content) still
+        // doesn't fit. Guarded so our own corrective resize - which triggers
+        // another allocation - doesn't re-trigger itself.
+        this.menu.actor.connect('notify::allocation', () => {
+            if (!this._pending_overflow_check) {
+                return;
+            }
+            this._pending_overflow_check = false;
+            let work_area = this._open_work_area;
+            if (!work_area) {
+                return;
+            }
+            let box = this.menu.actor.get_allocation_box();
+            let overflow = Math.max(work_area.x - box.x1, box.x2 - (work_area.x + work_area.width), 0);
+            if (overflow > 0) {
+                this._widget_area_container.setMaxWidth(this._widget_area_container.getWidth() - overflow);
+            }
+        });
         this._open_state_change_id = this.menu.connect('open-state-changed', (menu, is_open) => {
+            if (is_open) {
+                let monitor_index = Main.layoutManager.findIndexForActor(this);
+                let work_area = Main.layoutManager.getWorkAreaForMonitor(monitor_index);
+                this._open_work_area = work_area;
+                this._pending_overflow_check = true;
+                this._widget_area_container.setMaxWidth(work_area.width);
+            }
             for (let type in this._meter_widgets) {
                 if (is_open) {
                     this._meter_widgets[type].freeze();
@@ -59,20 +90,20 @@ class Menu extends PanelMenu.Button {
         }
     }
     _addIndicatorToTopBar(position, uuid) {
-        Panel.addToStatusArea(uuid, this, this._indicator_sort_order, position);
+        Main.panel.addToStatusArea(uuid, this, this._indicator_sort_order, position);
         this._indicator_previous_position = position;
     }
     _moveIndicatorOnTopBar(position) {
         // Gnome does not provide a method to remove indicator (opposite to addToStatusArea() method), so this is a workaround.
         switch (this._indicator_previous_position) {
             case 'left':
-                Panel._leftBox.remove_actor(this.container);
+                Main.panel._leftBox.remove_actor(this.container);
                 break;
             case 'center':
-                Panel._centerBox.remove_actor(this.container);
+                Main.panel._centerBox.remove_actor(this.container);
                 break;
             case 'right':
-                Panel._rightBox.remove_actor(this.container);
+                Main.panel._rightBox.remove_actor(this.container);
                 break;
             default:
                 throw new Error('Unknown position given: ' + this._indicator_previous_position);
@@ -80,13 +111,13 @@ class Menu extends PanelMenu.Button {
 
         switch (position) {
             case 'left':
-                Panel._leftBox.insert_child_at_index(this.container, this._indicator_sort_order);
+                Main.panel._leftBox.insert_child_at_index(this.container, this._indicator_sort_order);
                 break;
             case 'center':
-                Panel._centerBox.insert_child_at_index(this.container, this._indicator_sort_order);
+                Main.panel._centerBox.insert_child_at_index(this.container, this._indicator_sort_order);
                 break;
             case 'right':
-                Panel._rightBox.insert_child_at_index(this.container, this._indicator_sort_order);
+                Main.panel._rightBox.insert_child_at_index(this.container, this._indicator_sort_order);
                 break;
             default:
                 throw new Error('Unknown position given: ' + position);
@@ -157,7 +188,7 @@ class Menu extends PanelMenu.Button {
         let that = this;
         let event_id = this._settings.connect('changed::' + PrefsKeys.LAYOUT, function(settings, key) {
             let orientation = 'vertical' === settings.get_string(key) ? Clutter.Orientation.VERTICAL : Clutter.Orientation.HORIZONTAL;
-            that._widget_area_container.actor.orientation = orientation;
+            that._widget_area_container.setOrientation(orientation);
         });
         this._event_handler_ids.push(event_id);
     }
