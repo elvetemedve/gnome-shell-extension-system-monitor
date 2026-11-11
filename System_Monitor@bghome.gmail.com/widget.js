@@ -216,7 +216,11 @@ class InterfaceItem extends BaseMenuItem {
             x_align:Clutter.ActorAlign.END
         });
 
-        let container = new St.BoxLayout({vertical: false, x_expand: true, x_align:Clutter.ActorAlign.END});
+        let container = new St.BoxLayout({
+            orientation: Clutter.Orientation.VERTICAL,
+            x_expand: true,
+            x_align: Clutter.ActorAlign.END
+        });
         this.actor.add_child(container);
 
         container.add_child(this.download_text);
@@ -403,7 +407,7 @@ class MeterAreaContainer extends PopupMenu.PopupBaseMenuItem {
 const MeterContainer = GObject.registerClass(
 class MeterContainer extends St.BoxLayout {
     _init() {
-        super._init({"vertical": true});
+        super._init({orientation: Clutter.Orientation.VERTICAL});
         this._menu_items = [];
     }
     addTitleItem(item) {
