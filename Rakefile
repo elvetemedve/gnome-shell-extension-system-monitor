@@ -1,8 +1,6 @@
 require 'rake'
-require 'json'
 
 PACKAGE_NAME = 'System_Monitor@bghome.gmail.com'
-VERSION = JSON.parse(File.read("#{PACKAGE_NAME}/metadata.json"))['version']
 BUILD_DIRECTORY = File.join(File.dirname(__FILE__), "build")
 USER_INSTALL_DIRECTORY = File.expand_path('~/.local/share/gnome-shell/extensions')
 SYSTEM_INSTALL_DIRECTORY = '/usr/local/share/gnome-shell/extensions'
@@ -12,7 +10,7 @@ directory BUILD_DIRECTORY
 directory USER_INSTALL_DIRECTORY
 
 def zip_file
-	"#{PACKAGE_NAME}-#{VERSION}.zip"
+	"#{PACKAGE_NAME}.zip"
 end
 
 task :prepare => BUILD_DIRECTORY do

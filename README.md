@@ -34,7 +34,7 @@ of the OS. Once you have that, issue the following command:
 
     gem install rake
 
-Then `rake build` command will make the “**build/System_Monitor@bghome.gmail.com-[version].zip**” for you.
+Then `rake build` command will make the “**build/System_Monitor@bghome.gmail.com.zip**” for you.
 
 To remove all generated files, use the `rake cleanup` command.
 
