@@ -1,6 +1,6 @@
 # System Monitor
 
-[![codebeat badge](https://codebeat.co/badges/7d1c7fdf-19b1-402a-b222-b2791e868e1d)](https://codebeat.co/projects/github-com-elvetemedve-gnome-shell-extension-system-monitor-master)
+[![Shexli](https://github.com/elvetemedve/gnome-shell-extension-system-monitor/actions/workflows/shexli.yml/badge.svg?branch=master)](https://github.com/elvetemedve/gnome-shell-extension-system-monitor/actions/workflows/shexli.yml)
 ![Build Status](https://github.com/elvetemedve/gnome-shell-extension-system-monitor/actions/workflows/build.yml/badge.svg)
 
 ## Introduction
@@ -37,6 +37,12 @@ of the OS. Once you have that, issue the following command:
 Then `rake build` command will make the “**build/System_Monitor@bghome.gmail.com.zip**” for you.
 
 To remove all generated files, use the `rake cleanup` command.
+
+### Check
+
+`rake shexli` builds the package and checks it with [shexli](https://pypi.org/project/shexli/), the static analyzer extensions.gnome.org uses when reviewing uploads. The same check runs on every pull request.
+It needs Python 3.12 or later and git. The first run installs shexli into `.shexli-venv`.
+The task fails when shexli reports errors; warnings are only printed.
 
 ## Install
 
