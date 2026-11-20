@@ -17,9 +17,10 @@ def zip_file
 	"#{PACKAGE_NAME}.zip"
 end
 
+# The package doesn't include compiled settings schemas: GNOME Shell 44 and
+# later compile them when the extension is installed.
 task :prepare => BUILD_DIRECTORY do
 	cp_r PACKAGE_NAME + "/.", BUILD_DIRECTORY
-	sh %{#{GLIB_SCHEMA_COMPILE_COMMAND} #{BUILD_DIRECTORY}/schemas}
 end
 
 task :package => [:prepare, zip_file]
@@ -87,7 +88,15 @@ task :install, [:target] => [:cleanup, :build] do |t, args|
 
 	Rake::Task['uninstall'].invoke args.target
 	Rake::Task[target_dir].invoke
-	sh %{unzip -uo #{BUILD_DIRECTORY}/#{zip_file} -d #{target_dir}/#{PACKAGE_NAME}}
+	if args.target === 'user'
+		# Installs the same way as from extensions.gnome.org, compiling the
+		# settings schemas too.
+		sh 'gnome-extensions', 'install', '--force', File.join(BUILD_DIRECTORY, zip_file)
+	else
+		# gnome-extensions can only install for the current user.
+		sh %{unzip -uo #{BUILD_DIRECTORY}/#{zip_file} -d #{target_dir}/#{PACKAGE_NAME}}
+		sh %{#{GLIB_SCHEMA_COMPILE_COMMAND} #{target_dir}/#{PACKAGE_NAME}/schemas}
+	end
 	puts message
 end
 
