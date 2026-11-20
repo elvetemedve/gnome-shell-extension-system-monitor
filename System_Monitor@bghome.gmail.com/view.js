@@ -113,13 +113,13 @@ class Menu extends PanelMenu.Button {
         // Gnome does not provide a method to remove indicator (opposite to addToStatusArea() method), so this is a workaround.
         switch (this._indicator_previous_position) {
             case 'left':
-                Main.panel._leftBox.remove_actor(this.container);
+                Main.panel._leftBox.remove_child(this.container);
                 break;
             case 'center':
-                Main.panel._centerBox.remove_actor(this.container);
+                Main.panel._centerBox.remove_child(this.container);
                 break;
             case 'right':
-                Main.panel._rightBox.remove_actor(this.container);
+                Main.panel._rightBox.remove_child(this.container);
                 break;
             default:
                 throw new Error('Unknown position given: ' + this._indicator_previous_position);
