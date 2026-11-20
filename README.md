@@ -47,7 +47,12 @@ The task fails when shexli reports errors; warnings are only printed.
 ## Install
 
 Extensions can be installed per-user in *~/.local/share/gnome-shell/extensions*, or system wide in */usr/share/gnome-shell/extensions* and */usr/local/share/gnome-shell/extensions*.
-You can simply extract the content of the zip archive to the proper location or use Gnome Tweak tool.
+To install the zip archive for the current user, run:
+
+    gnome-extensions install --force System_Monitor@bghome.gmail.com.zip
+
+The zip archive doesn't include compiled settings schemas, because `gnome-extensions install` compiles them during the installation.
+For a system wide installation, extract the zip archive into a directory named *System_Monitor@bghome.gmail.com* in one of the system locations above, then run `glib-compile-schemas` on its *schemas* subdirectory.
 
 Also don't forget to install the dependencies. You can find distribution specific instructions on the [Installation wiki page](https://github.com/elvetemedve/gnome-shell-extension-system-monitor/wiki/Installation).
 
