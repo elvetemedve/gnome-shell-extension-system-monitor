@@ -19,6 +19,8 @@
         glib
         zip
         unzip
+        # For `rake shexli`, which needs Python 3.12 or later
+        python312
       ];
 
       shellHook = ''

@@ -1,7 +1,11 @@
 require 'rake'
+require 'json'
+require 'yaml'
 
 PACKAGE_NAME = 'System_Monitor@bghome.gmail.com'
 BUILD_DIRECTORY = File.join(File.dirname(__FILE__), "build")
+SHEXLI_WORKFLOW = File.join(File.dirname(__FILE__), '.github', 'workflows', 'shexli.yml')
+SHEXLI_VENV = File.join(File.dirname(__FILE__), '.shexli-venv')
 USER_INSTALL_DIRECTORY = File.expand_path('~/.local/share/gnome-shell/extensions')
 SYSTEM_INSTALL_DIRECTORY = '/usr/local/share/gnome-shell/extensions'
 GLIB_SCHEMA_COMPILE_COMMAND = 'glib-compile-schemas'
@@ -28,6 +32,43 @@ end
 desc "Build the distributable files under the build directory"
 task :build => [:package] do
 	puts "Build complete"
+end
+
+# The same shexli version the CI workflow uses, read from the workflow so the
+# two can't drift apart.
+def shexli_requirements
+	env = YAML.load_file(SHEXLI_WORKFLOW).fetch('env')
+	[
+		"shexli @ #{env.fetch('SHEXLI_SOURCE')}",
+		"tree-sitter==#{env.fetch('TREE_SITTER_VERSION')}",
+		"tree-sitter-javascript==#{env.fetch('TREE_SITTER_JAVASCRIPT_VERSION')}",
+	]
+end
+
+# Install shexli into a local virtualenv, reinstalling it from scratch
+# whenever the pinned versions in the workflow change.
+task :shexli_venv do
+	stamp = File.join(SHEXLI_VENV, 'requirements.txt')
+	requirements = shexli_requirements
+	next if File.exist?(stamp) && File.readlines(stamp, chomp: true) == requirements
+
+	sh 'python3', '-m', 'venv', '--clear', SHEXLI_VENV
+	sh File.join(SHEXLI_VENV, 'bin', 'pip'), 'install', '--disable-pip-version-check', *requirements
+	File.write(stamp, requirements.join("\n") + "\n")
+end
+
+desc "Check the package with shexli, the analyzer extensions.gnome.org uses for reviews"
+task :shexli => [:shexli_venv, :cleanup, :build] do
+	shexli = File.join(SHEXLI_VENV, 'bin', 'shexli')
+	package = File.join(BUILD_DIRECTORY, zip_file)
+
+	sh shexli, package
+
+	# shexli always exits with 0, so count the errors in its JSON report.
+	output = IO.popen([shexli, '--format', 'json', package], &:read)
+	raise "shexli failed with status #{$?.exitstatus}" unless $?.success?
+	errors = JSON.parse(output).fetch('findings').count { |finding| finding['severity'] == 'error' }
+	raise "shexli reported #{errors} error(s), extensions.gnome.org review would likely reject this package." if errors > 0
 end
 
 desc "Install the GNOME extension, available options for target: user*, system."

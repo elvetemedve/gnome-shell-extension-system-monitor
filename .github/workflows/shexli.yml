@@ -1,0 +1,93 @@
+# Runs shexli, the static analyzer extensions.gnome.org uses when reviewing
+# uploads, against the built extension package on every pull request.
+#
+# Errors fail the check; warnings are only reported, because shexli is still
+# experimental and some of its warnings need human judgement. All findings
+# show up as annotations on the pull request and in the job summary.
+
+name: Shexli
+
+on:
+  pull_request:
+  # Also run on master so the README badge reflects its current state.
+  push:
+    branches: [ "master" ]
+
+permissions:
+  contents: read
+
+env:
+  EXTENSION_UUID: System_Monitor@bghome.gmail.com
+  # Pinned upstream commit of shexli. The PyPI release (0.2.1) predates
+  # GNOME 51 and rejects it as an implausible shell-version, so install from
+  # the extensions.gnome.org repository instead. Bump the commit to pick up
+  # new review rules.
+  SHEXLI_SOURCE: git+https://gitlab.gnome.org/Infrastructure/extensions-web.git@09e0f66881d6dabb26bcfdd3db64365647cbd727#subdirectory=shexli
+  TREE_SITTER_VERSION: 0.26.1
+  TREE_SITTER_JAVASCRIPT_VERSION: 0.25.0
+
+jobs:
+  shexli:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: 3.3
+
+      - name: Build extension package
+        run: rake build
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.12'
+
+      - name: Install shexli
+        run: >-
+          python -m pip install --disable-pip-version-check
+          "shexli @ ${SHEXLI_SOURCE}"
+          "tree-sitter==${TREE_SITTER_VERSION}"
+          "tree-sitter-javascript==${TREE_SITTER_JAVASCRIPT_VERSION}"
+
+      - name: Run shexli
+        run: |
+          set -euo pipefail
+          package="build/${EXTENSION_UUID}.zip"
+
+          shexli --format json "$package" > shexli-report.json
+          shexli --format text "$package" | tee shexli-report.txt
+
+          {
+            echo '## Shexli'
+            echo
+            echo '```'
+            cat shexli-report.txt
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          # Turn each finding into a GitHub annotation, pointing at the
+          # source file the packaged file was copied from.
+          jq -r --arg package "$package:" --arg source "$EXTENSION_UUID/" '
+            def escape: gsub("%"; "%25") | gsub("\r"; "%0D") | gsub("\n"; "%0A");
+            def property: escape | gsub(":"; "%3A") | gsub(","; "%2C");
+            .findings[] as $finding
+            | ($finding.evidence[0] // {}) as $evidence
+            | [
+                ($evidence.path // empty | ltrimstr($package) | "file=" + ($source + . | property)),
+                ($evidence.line // empty | "line=\(.)"),
+                ("title=" + ("shexli \($finding.rule_id): \($finding.title)" | property))
+              ] as $properties
+            | {"error": "error", "warning": "warning"}[$finding.severity] // "notice" as $level
+            | "::\($level) \($properties | join(","))::\($finding.message + (if $finding.source_url then " See \($finding.source_url)" else "" end) | escape)"
+          ' shexli-report.json
+
+          errors="$(jq '[.findings[] | select(.severity == "error")] | length' shexli-report.json)"
+          if [ "$errors" -gt 0 ]; then
+            echo "::error::shexli reported $errors error(s), extensions.gnome.org review would likely reject this package."
+            exit 1
+          fi
